@@ -1,0 +1,150 @@
+:root {
+  color: #1f2430;
+  background: linear-gradient(135deg, #f7f8fb, #eef4ff);
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+.app-shell {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.tab {
+  border: 1px solid #b8c2d9;
+  border-radius: 8px;
+  background: #fff;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.tab.active {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  color: #fff;
+}
+
+.panel {
+  border: 1px solid #d7dceb;
+  border-radius: 12px;
+  background: #fff;
+  padding: 20px;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.status-pill {
+  font-size: 12px;
+  border-radius: 999px;
+  padding: 6px 10px;
+  border: 1px solid #cbd5e1;
+}
+
+.status-pill.live {
+  border-color: #16a34a;
+  color: #166534;
+  background: #f0fdf4;
+}
+
+.status-pill.reconnecting,
+.status-pill.connecting {
+  border-color: #ca8a04;
+  color: #854d0e;
+  background: #fefce8;
+}
+
+.status-pill.error {
+  border-color: #dc2626;
+  color: #991b1b;
+  background: #fef2f2;
+}
+
+.muted {
+  color: #6b7280;
+}
+
+.form-grid {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+label {
+  display: grid;
+  gap: 6px;
+  font-size: 14px;
+}
+
+input,
+select,
+button {
+  border: 1px solid #cdd5ea;
+  border-radius: 8px;
+  font-size: 14px;
+  padding: 10px;
+}
+
+button {
+  background: #1d4ed8;
+  color: #fff;
+  border-color: #1d4ed8;
+  cursor: pointer;
+}
+
+.leaderboard-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.leaderboard-table th,
+.leaderboard-table td {
+  text-align: left;
+  padding: 10px;
+  border-bottom: 1px solid #e6ebf5;
+}
+
+.empty-cell {
+  color: #6b7280;
+  text-align: center;
+}
+
+.success-text {
+  color: #166534;
+}
+
+.error-text {
+  color: #991b1b;
+}
+
+@media (max-width: 700px) {
+  .app-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
