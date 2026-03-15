@@ -23,16 +23,72 @@ export async function login(username, password) {
   return response.json();
 }
 
-export async function fetchPlayers() {
-  const response = await fetch(`${API_BASE_URL}/players`);
+export async function fetchTeams() {
+  const response = await fetch(`${API_BASE_URL}/teams`);
   if (!response.ok) {
-    throw new Error("Unable to load players");
+    throw new Error("Unable to load teams");
   }
   return response.json();
 }
 
-export async function createPlayer(token, name) {
-  const response = await fetch(`${API_BASE_URL}/players`, {
+export async function createTeam(token, name, playerNames = []) {
+  const response = await fetch(`${API_BASE_URL}/teams`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ name, player_names: playerNames }),
+  });
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload.detail || "Unable to create team");
+  }
+
+  return response.json();
+}
+
+export async function updateTeam(token, teamId, name) {
+  const response = await fetch(`${API_BASE_URL}/teams/${teamId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ name }),
+  });
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload.detail || "Unable to update team");
+  }
+
+  return response.json();
+}
+
+export async function deleteTeam(token, teamId) {
+  const response = await fetch(`${API_BASE_URL}/teams/${teamId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload.detail || "Unable to delete team");
+  }
+}
+
+export async function fetchGames() {
+  const response = await fetch(`${API_BASE_URL}/games`);
+  if (!response.ok) {
+    throw new Error("Unable to load games");
+  }
+  return response.json();
+}
+
+export async function createGame(token, name) {
+  const response = await fetch(`${API_BASE_URL}/games`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -43,20 +99,109 @@ export async function createPlayer(token, name) {
 
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
+    throw new Error(payload.detail || "Unable to create game");
+  }
+
+  return response.json();
+}
+
+export async function updateGame(token, gameId, name) {
+  const response = await fetch(`${API_BASE_URL}/games/${gameId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ name }),
+  });
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload.detail || "Unable to update game");
+  }
+
+  return response.json();
+}
+
+export async function deleteGame(token, gameId) {
+  const response = await fetch(`${API_BASE_URL}/games/${gameId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload.detail || "Unable to delete game");
+  }
+}
+
+export async function fetchPlayers(teamId) {
+  const url = teamId
+    ? `${API_BASE_URL}/players?team_id=${teamId}`
+    : `${API_BASE_URL}/players`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error("Unable to load players");
+  }
+  return response.json();
+}
+
+export async function createPlayer(token, teamId, name) {
+  const response = await fetch(`${API_BASE_URL}/players`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ team_id: Number(teamId), name }),
+  });
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
     throw new Error(payload.detail || "Unable to create player");
   }
 
   return response.json();
 }
 
-export async function submitScore(token, playerId, delta, reason) {
+export async function updatePlayer(token, playerId, teamId, name) {
+  const response = await fetch(`${API_BASE_URL}/players/${playerId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ team_id: Number(teamId), name }),
+  });
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload.detail || "Unable to update player");
+  }
+
+  return response.json();
+}
+
+export async function deletePlayer(token, playerId) {
+  const response = await fetch(`${API_BASE_URL}/players/${playerId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload.detail || "Unable to delete player");
+  }
+}
+
+export async function submitScore(token, teamId, gameId, delta, reason) {
   const response = await fetch(`${API_BASE_URL}/scores`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ player_id: Number(playerId), delta: Number(delta), reason }),
+    body: JSON.stringify({ team_id: Number(teamId), game_id: Number(gameId), delta: Number(delta), reason }),
   });
 
   if (!response.ok) {

@@ -5,3 +5,4 @@ pydantic-settings==2.10.1
 python-multipart==0.0.20
 PyJWT==2.10.1
 psycopg[binary]==3.2.13
+pyyaml==6.0.2

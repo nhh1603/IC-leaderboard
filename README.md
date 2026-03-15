@@ -91,9 +91,11 @@ Set frontend environment variables on your frontend host (Netlify/Vercel):
 ## Implemented Endpoints
 
 - `POST /auth/login`
-- `POST /players` (admin token required)
+- `POST /teams` (admin token required)
+- `GET /teams`
+- `POST /players` (admin token required, requires `team_id`, max 7 players/team)
 - `GET /players`
-- `POST /scores` (admin token required)
+- `POST /scores` (admin token required, uses `team_id`)
 - `GET /leaderboard`
 - `WS /ws/leaderboard`
 
@@ -102,9 +104,10 @@ Set frontend environment variables on your frontend host (Netlify/Vercel):
 1. Open player view in one browser tab.
 2. Open admin view in another tab.
 3. Login as admin.
-4. Create a player.
-5. Submit a score update.
-6. Verify player view updates within ~1 second.
+4. Create a team.
+5. Add players to that team.
+6. Submit a score update for the team.
+7. Verify player view updates within ~1 second.
 
 ## Next Build Steps
 
