@@ -10,6 +10,19 @@ function formatDateTime(iso) {
   return new Date(iso).toLocaleString();
 }
 
+function formatDuration(milliseconds) {
+  const total = Math.max(0, Number(milliseconds) || 0);
+  const hours = Math.floor(total / 3600000);
+  const mins = Math.floor((total % 3600000) / 60000);
+  const secs = Math.floor((total % 60000) / 1000);
+  const ms = total % 1000;
+
+  if (hours > 0) {
+    return `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}.${String(ms).padStart(3, "0")}`;
+  }
+  return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}.${String(ms).padStart(3, "0")}`;
+}
+
 function renderStars(score) {
   const normalizedScore = Math.max(0, Math.min(3, Number(score) || 0));
   const filledCount = Math.round(normalizedScore);
@@ -147,6 +160,10 @@ export default function PlayerPage() {
         const existing = byTeam.get(entry.team_id);
         if (existing) {
           existing.total_score += entry.total_score;
+          existing.total_time_milliseconds += entry.total_time_milliseconds || 0;
+          for (const round of entry.time_rounds || []) {
+            existing.time_rounds.push({ ...round, game_name: game.game_name });
+          }
           continue;
         }
 
@@ -154,6 +171,11 @@ export default function PlayerPage() {
           team_id: entry.team_id,
           team_name: entry.team_name,
           total_score: entry.total_score,
+          total_time_milliseconds: entry.total_time_milliseconds || 0,
+          time_rounds: (entry.time_rounds || []).map((round) => ({
+            ...round,
+            game_name: game.game_name,
+          })),
         });
       }
     }
@@ -205,12 +227,13 @@ export default function PlayerPage() {
             <th>Rank</th>
             <th>Team</th>
             <th>Score</th>
+            <th>Time</th>
           </tr>
         </thead>
         <tbody>
           {entries.length === 0 ? (
             <tr>
-              <td colSpan={3} className="empty-cell">
+              <td colSpan={4} className="empty-cell">
                 {games.length === 0 ? "No games configured yet" : "No scores yet"}
               </td>
             </tr>
@@ -218,6 +241,7 @@ export default function PlayerPage() {
             entries.flatMap((entry, index) => {
               const isExpanded = expandedTeams.has(entry.team_id);
               const members = playersByTeam[entry.team_id] || [];
+              const rounds = entry.time_rounds || [];
               return [
                 <tr key={entry.team_id} className="team-row" onClick={() => toggleTeam(entry.team_id)}>
                   <td>{index + 1}</td>
@@ -232,11 +256,12 @@ export default function PlayerPage() {
                       </span>
                     ) : renderStars(entry.total_score)}
                   </td>
+                  <td>{formatDuration(entry.total_time_milliseconds || 0)}</td>
                 </tr>,
                 isExpanded && (
                   <tr key={`${entry.team_id}-players`} className="players-row">
                     <td />
-                    <td colSpan={2}>
+                    <td colSpan={3}>
                       {members.length === 0 ? (
                         <span className="muted">No players</span>
                       ) : (
@@ -244,6 +269,22 @@ export default function PlayerPage() {
                           {members.map((name) => <li key={name}>{name}</li>)}
                         </ul>
                       )}
+
+                      <div className="round-breakdown">
+                        <strong>Timer rounds</strong>
+                        {rounds.length === 0 ? (
+                          <p className="muted">No rounds recorded.</p>
+                        ) : (
+                          <ul className="round-list">
+                            {rounds.map((round, roundIndex) => (
+                              <li key={`${entry.team_id}-${round.round_number}-${roundIndex}`}>
+                                {activeGameId === TOTAL_TAB_ID && round.game_name ? `${round.game_name} - ` : ""}
+                                Round {round.round_number}: {formatDuration(round.duration_milliseconds)}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ),

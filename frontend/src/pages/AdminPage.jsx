@@ -8,11 +8,14 @@ import {
   createTeam,
   deleteGame,
   deletePlayer,
+  deleteTimerRound,
   deleteTeam,
   fetchGames,
   fetchPlayers,
+  fetchTimerRounds,
   fetchTeams,
   login,
+  registerTimerRound,
   submitScore,
   updateGame,
   updatePlayer,
@@ -24,6 +27,14 @@ function parsePlayerNames(raw) {
     .split(/[\n,]+/)
     .map((name) => name.trim())
     .filter(Boolean);
+}
+
+function formatDuration(milliseconds) {
+  const total = Math.max(0, Number(milliseconds) || 0);
+  const mins = Math.floor(total / 60000);
+  const secs = Math.floor((total % 60000) / 1000);
+  const ms = total % 1000;
+  return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}.${String(ms).padStart(3, "0")}`;
 }
 
 export default function AdminPage({ token, setToken, loginOnly = false }) {
@@ -51,6 +62,12 @@ export default function AdminPage({ token, setToken, loginOnly = false }) {
   const [delta, setDelta] = useState(0);
   const [reason, setReason] = useState("Manual update");
 
+  const [timerRunning, setTimerRunning] = useState(false);
+  const [timerStartAt, setTimerStartAt] = useState(null);
+  const [liveElapsed, setLiveElapsed] = useState(0);
+  const [stoppedElapsed, setStoppedElapsed] = useState(0);
+  const [timerRoundsForSelection, setTimerRoundsForSelection] = useState([]);
+
   const [statusText, setStatusText] = useState("");
   const [errorText, setErrorText] = useState("");
 
@@ -71,6 +88,14 @@ export default function AdminPage({ token, setToken, loginOnly = false }) {
   useEffect(() => {
     if (loginOnly && isLoggedIn) navigate("/admin", { replace: true });
   }, [isLoggedIn, loginOnly, navigate]);
+
+  useEffect(() => {
+    if (!timerRunning || !timerStartAt) return undefined;
+    const id = window.setInterval(() => {
+      setLiveElapsed(Date.now() - timerStartAt);
+    }, 33);
+    return () => window.clearInterval(id);
+  }, [timerRunning, timerStartAt]);
 
   const loadTeams = async () => {
     try {
@@ -295,6 +320,83 @@ export default function AdminPage({ token, setToken, loginOnly = false }) {
     }
   };
 
+  const startTimer = () => {
+    if (timerRunning) return;
+    if (stoppedElapsed > 0) return;
+    setTimerStartAt(Date.now());
+    setLiveElapsed(0);
+    setStoppedElapsed(0);
+    setTimerRunning(true);
+  };
+
+  const stopTimer = () => {
+    if (!timerRunning || !timerStartAt) return;
+    const elapsed = Math.max(0, Date.now() - timerStartAt);
+    setTimerRunning(false);
+    setTimerStartAt(null);
+    setLiveElapsed(elapsed);
+    setStoppedElapsed(elapsed);
+  };
+
+  const resumeTimer = () => {
+    if (timerRunning || stoppedElapsed <= 0) return;
+    setTimerStartAt(Date.now() - stoppedElapsed);
+    setLiveElapsed(stoppedElapsed);
+    setTimerRunning(true);
+  };
+
+  const resetTimer = () => {
+    setTimerRunning(false);
+    setTimerStartAt(null);
+    setLiveElapsed(0);
+    setStoppedElapsed(0);
+  };
+
+  const registerCurrentRound = async () => {
+    const duration = timerRunning ? liveElapsed : stoppedElapsed;
+    if (!token || !selectedTeamId || !selectedGameId || duration <= 0) return;
+
+    setErrorText("");
+    setStatusText("");
+    try {
+      const payload = await registerTimerRound(token, selectedTeamId, selectedGameId, duration);
+      setTimerRoundsForSelection((prev) => [...prev, payload]);
+      setStatusText(`Registered round ${payload.round_number}: ${formatDuration(payload.duration_milliseconds)}`);
+      resetTimer();
+    } catch (err) {
+      setErrorText(err.message);
+    }
+  };
+
+  const handleDeleteTimerRound = async (timerRound) => {
+    if (!token || !timerRound?.id) return;
+    if (!window.confirm(`Delete round ${timerRound.round_number}?`)) return;
+
+    setErrorText("");
+    setStatusText("");
+    try {
+      await deleteTimerRound(token, timerRound.id);
+      const refreshed = await fetchTimerRounds(selectedTeamId, selectedGameId);
+      setTimerRoundsForSelection(refreshed);
+      setStatusText(`Deleted round ${timerRound.round_number}`);
+    } catch (err) {
+      setErrorText(err.message);
+    }
+  };
+
+  useEffect(() => {
+    if (!selectedTeamId || !selectedGameId) {
+      setTimerRoundsForSelection([]);
+      return;
+    }
+
+    fetchTimerRounds(selectedTeamId, selectedGameId)
+      .then(setTimerRoundsForSelection)
+      .catch((err) => setErrorText(err.message));
+  }, [selectedTeamId, selectedGameId]);
+
+  const timerDisplay = timerRunning ? liveElapsed : stoppedElapsed;
+
   return (
     <section className="panel">
       <h2>Admin View</h2>
@@ -508,6 +610,38 @@ export default function AdminPage({ token, setToken, loginOnly = false }) {
                   </label>
                   <button type="submit" disabled={!selectedGameId || !selectedTeamId}>Submit score</button>
                 </form>
+
+                <h3>Round timer</h3>
+                <div className="timer-panel">
+                  <p className="timer-display">{formatDuration(timerDisplay)}</p>
+                  <div className="timer-actions">
+                    <button type="button" onClick={startTimer} disabled={timerRunning || stoppedElapsed > 0}>Start</button>
+                    <button type="button" onClick={resumeTimer} disabled={timerRunning || stoppedElapsed <= 0}>Resume</button>
+                    <button type="button" onClick={stopTimer} disabled={!timerRunning}>Stop</button>
+                    <button type="button" className="compact neutral" onClick={resetTimer} disabled={timerRunning && liveElapsed === 0}>Reset</button>
+                    <button
+                      type="button"
+                      onClick={registerCurrentRound}
+                      disabled={!selectedTeamId || !selectedGameId || timerDisplay <= 0 || timerRunning}
+                    >
+                      Register round
+                    </button>
+                  </div>
+                  <p className="muted">You can register as many rounds as needed for the selected team/game.</p>
+
+                  {timerRoundsForSelection.length > 0 && (
+                    <ul className="timer-round-list">
+                      {timerRoundsForSelection.map((round) => (
+                        <li key={round.id ?? `${round.round_number}-${round.duration_milliseconds}`}>
+                          <span>Round {round.round_number}: {formatDuration(round.duration_milliseconds)}</span>
+                          <button type="button" className="compact danger" onClick={() => handleDeleteTimerRound(round)}>
+                            Delete
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               </>
             )}
 

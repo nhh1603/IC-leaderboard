@@ -88,10 +88,36 @@ class ScoreResponse(BaseModel):
         from_attributes = True
 
 
+class TimerRoundCreateRequest(BaseModel):
+    team_id: int
+    game_id: int
+    duration_milliseconds: int = Field(ge=0, le=86_400_000)
+
+
+class TimerRoundResponse(BaseModel):
+    id: int
+    team_id: int
+    game_id: int
+    duration_milliseconds: int
+    round_number: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class RoundTimeDetail(BaseModel):
+    round_number: int
+    duration_milliseconds: int
+    game_name: str | None = None
+
+
 class LeaderboardEntry(BaseModel):
     team_id: int
     team_name: str
     total_score: int
+    total_time_milliseconds: int = 0
+    time_rounds: list[RoundTimeDetail] = Field(default_factory=list)
 
 
 class GameLeaderboard(BaseModel):

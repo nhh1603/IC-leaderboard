@@ -1,6 +1,19 @@
 :root {
-  color: #1f2430;
-  background: linear-gradient(135deg, #f7f8fb, #eef4ff);
+  --text: #2f1417;
+  --muted: #7a5c60;
+  --bg-start: #fff5f6;
+  --bg-end: #ffe9ec;
+  --surface: #ffffff;
+  --surface-soft: #fff8f9;
+  --border: #f1c8ce;
+  --border-strong: #e8a6b0;
+  --accent: #c1121f;
+  --accent-strong: #9a0f19;
+  --accent-soft: #ffe6e9;
+  --danger: #b91c1c;
+
+  color: var(--text);
+  background: linear-gradient(135deg, var(--bg-start), var(--bg-end));
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
 
@@ -11,6 +24,8 @@
 body {
   margin: 0;
   min-height: 100vh;
+  color: var(--text);
+  background: linear-gradient(135deg, var(--bg-start), var(--bg-end));
 }
 
 .app-shell {
@@ -35,25 +50,30 @@ body {
 .tab {
   display: inline-flex;
   align-items: center;
-  border: 1px solid #b8c2d9;
+  border: 1px solid var(--border-strong);
   border-radius: 8px;
-  background: #fff;
+  background: var(--surface);
   padding: 8px 12px;
   cursor: pointer;
   text-decoration: none;
-  color: #1f2430;
+  color: var(--text);
 }
 
 .tab.active {
-  background: #1d4ed8;
-  border-color: #1d4ed8;
+  background: var(--accent);
+  border-color: var(--accent);
   color: #fff;
 }
 
+.tab:hover:not(.active) {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
 .panel {
-  border: 1px solid #d7dceb;
+  border: 1px solid var(--border);
   border-radius: 12px;
-  background: #fff;
+  background: var(--surface);
   padding: 20px;
 }
 
@@ -73,22 +93,33 @@ body {
 
 .sidebar-tab {
   text-align: left;
-  background: #f8faff;
-  color: #1e3a8a;
-  border-color: #c7d4f5;
+  background: var(--surface-soft);
+  color: var(--accent-strong);
+  border-color: var(--border-strong);
 }
 
 .sidebar-tab.active {
-  background: #1d4ed8;
-  border-color: #1d4ed8;
+  background: var(--accent);
+  border-color: var(--accent);
   color: #fff;
+}
+
+.sidebar-tab:hover:not(.active) {
+  background: #ffecee;
+  color: var(--accent-strong);
 }
 
 .sidebar-tab.logout {
   margin-top: 12px;
-  background: #fff;
-  color: #b91c1c;
-  border-color: #fecaca;
+  background: var(--surface);
+  color: var(--danger);
+  border-color: #f5b3ba;
+}
+
+.sidebar-tab.logout:hover {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
 }
 
 .admin-content {
@@ -125,9 +156,9 @@ body {
 }
 
 .compact.outline {
-  background: #fff;
-  color: #1d4ed8;
-  border-color: #1d4ed8;
+  background: var(--surface);
+  color: var(--accent);
+  border-color: var(--accent);
 }
 
 .compact.danger {
@@ -136,15 +167,27 @@ body {
   border-color: #dc2626;
 }
 
+.compact.outline:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.compact.danger:hover {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+}
+
 .team-cards {
   display: grid;
   gap: 12px;
 }
 
 .team-card {
-  border: 1px solid #dbe4fb;
+  border: 1px solid var(--border);
   border-radius: 10px;
-  background: #f8faff;
+  background: var(--surface-soft);
   padding: 12px;
 }
 
@@ -177,8 +220,8 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  border: 1px solid #d7dceb;
-  background: #fff;
+  border: 1px solid var(--border);
+  background: var(--surface);
   border-radius: 8px;
   padding: 6px 8px;
 }
@@ -191,6 +234,49 @@ body {
   display: flex;
   gap: 8px;
   margin-top: 10px;
+}
+
+.timer-panel {
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.timer-display {
+  margin: 0 0 10px;
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--accent-strong);
+}
+
+.timer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.timer-round-list,
+.round-list {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+
+.timer-round-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.round-breakdown {
+  margin-top: 10px;
+}
+
+.round-breakdown strong {
+  color: var(--accent-strong);
 }
 
 .panel-header {
@@ -226,7 +312,7 @@ body {
 }
 
 .muted {
-  color: #6b7280;
+  color: var(--muted);
 }
 
 .form-grid {
@@ -245,7 +331,7 @@ input,
 textarea,
 select,
 button {
-  border: 1px solid #cdd5ea;
+  border: 1px solid var(--border-strong);
   border-radius: 8px;
   font-size: 14px;
   padding: 10px;
@@ -256,11 +342,37 @@ textarea {
   font-family: inherit;
 }
 
+input,
+textarea,
+select {
+  color: var(--text);
+  background: var(--surface);
+}
+
 button {
-  background: #1d4ed8;
+  background: var(--accent);
   color: #fff;
-  border-color: #1d4ed8;
+  border-color: var(--accent);
   cursor: pointer;
+}
+
+button:hover {
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+  color: #fff;
+}
+
+button:disabled {
+  background: #d7dbe2;
+  border-color: #d7dbe2;
+  color: #7f8795;
+  cursor: not-allowed;
+}
+
+button:disabled:hover {
+  background: #d7dbe2;
+  border-color: #d7dbe2;
+  color: #7f8795;
 }
 
 .leaderboard-table {
@@ -272,11 +384,11 @@ button {
 .leaderboard-table td {
   text-align: left;
   padding: 10px;
-  border-bottom: 1px solid #e6ebf5;
+  border-bottom: 1px solid var(--border);
 }
 
 .empty-cell {
-  color: #6b7280;
+  color: var(--muted);
   text-align: center;
 }
 
@@ -288,18 +400,25 @@ button {
 }
 
 .game-tab {
-  border: 1px solid #b8c2d9;
+  border: 1px solid var(--border-strong);
   border-radius: 8px;
-  background: #fff;
+  background: var(--surface);
+  color: var(--text);
   padding: 6px 14px;
   cursor: pointer;
   font-size: 13px;
 }
 
 .game-tab.active {
-  background: #1d4ed8;
-  border-color: #1d4ed8;
+  background: var(--accent);
+  border-color: var(--accent);
   color: #fff;
+}
+
+.game-tab:hover:not(.active) {
+  background: var(--accent-soft);
+  border-color: var(--border-strong);
+  color: var(--accent-strong);
 }
 
 .star-rating {
@@ -315,7 +434,7 @@ button {
 }
 
 .star-empty {
-  color: #cbd5e1;
+  color: #d8c8cb;
 }
 
 .total-score-badge {
@@ -331,20 +450,20 @@ button {
 }
 
 .team-row:hover td {
-  background: #f0f4ff;
+  background: var(--accent-soft);
 }
 
 .team-toggle {
   display: inline-block;
   width: 16px;
   font-size: 11px;
-  color: #6b7280;
+  color: var(--muted);
 }
 
 .players-row td {
-  background: #f8faff;
+  background: var(--surface-soft);
   padding: 8px 10px 12px 36px;
-  border-bottom: 1px solid #e6ebf5;
+  border-bottom: 1px solid var(--border);
 }
 
 .player-list {
@@ -357,8 +476,8 @@ button {
 }
 
 .player-list li {
-  background: #fff;
-  border: 1px solid #c7d4f5;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
   border-radius: 6px;
   padding: 4px 10px;
   font-size: 13px;
@@ -367,7 +486,7 @@ button {
 h3 {
   margin: 20px 0 8px;
   font-size: 15px;
-  color: #374151;
+  color: #542025;
 }
 
 .success-text {

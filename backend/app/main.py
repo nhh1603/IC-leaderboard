@@ -11,7 +11,7 @@ from app.config import settings
 from app.database import Base, SessionLocal, engine, get_db
 from app.game_loader import load_games_from_config
 from app.leaderboard import get_leaderboard
-from app.models import Game, Player, ScoreEvent, Team
+from app.models import Game, Player, ScoreEvent, Team, TimerRound
 from app.schemas import (
     GameCreateRequest,
     GameResponse,
@@ -23,6 +23,8 @@ from app.schemas import (
     PlayerUpdateRequest,
     ScoreCreateRequest,
     ScoreResponse,
+    TimerRoundCreateRequest,
+    TimerRoundResponse,
     TeamCreateRequest,
     TeamResponse,
     TeamUpdateRequest,
@@ -240,6 +242,104 @@ def list_players(
         query = query.where(Player.team_id == team_id)
     players: Sequence[Player] = db.scalars(query).all()
     return [PlayerResponse.model_validate(player) for player in players]
+
+
+@app.get("/timer-rounds", response_model=list[TimerRoundResponse])
+def list_timer_rounds(
+    team_id: int | None = Query(default=None, ge=1),
+    game_id: int | None = Query(default=None, ge=1),
+    db: Session = Depends(get_db),
+) -> list[TimerRoundResponse]:
+    query = select(TimerRound).order_by(TimerRound.created_at.asc(), TimerRound.id.asc())
+    if team_id is not None:
+        query = query.where(TimerRound.team_id == team_id)
+    if game_id is not None:
+        query = query.where(TimerRound.game_id == game_id)
+    rows: Sequence[TimerRound] = db.scalars(query).all()
+    return [
+        TimerRoundResponse(
+            id=row.id,
+            team_id=row.team_id,
+            game_id=row.game_id,
+            duration_milliseconds=row.duration_seconds,
+            round_number=row.round_number,
+            created_at=row.created_at,
+        )
+        for row in rows
+    ]
+
+
+@app.post("/timer-rounds", response_model=TimerRoundResponse)
+async def create_timer_round(
+    payload: TimerRoundCreateRequest,
+    _: str = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> TimerRoundResponse:
+    team = db.get(Team, payload.team_id)
+    if team is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
+
+    game = db.get(Game, payload.game_id)
+    if game is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Game not found")
+
+    current_round_count = db.scalar(
+        select(func.count(TimerRound.id)).where(
+            TimerRound.team_id == payload.team_id,
+            TimerRound.game_id == payload.game_id,
+        )
+    ) or 0
+
+    timer_round = TimerRound(
+        team_id=payload.team_id,
+        game_id=payload.game_id,
+        duration_seconds=payload.duration_milliseconds,
+        round_number=current_round_count + 1,
+    )
+    db.add(timer_round)
+    db.commit()
+    db.refresh(timer_round)
+
+    leaderboard = get_leaderboard(db)
+    await leaderboard_connections.broadcast_json(leaderboard.model_dump(mode="json"))
+
+    return TimerRoundResponse(
+        id=timer_round.id,
+        team_id=timer_round.team_id,
+        game_id=timer_round.game_id,
+        duration_milliseconds=timer_round.duration_seconds,
+        round_number=timer_round.round_number,
+        created_at=timer_round.created_at,
+    )
+
+
+@app.delete("/timer-rounds/{timer_round_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_timer_round(
+    timer_round_id: int,
+    _: str = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> None:
+    timer_round = db.get(TimerRound, timer_round_id)
+    if timer_round is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Timer round not found")
+
+    team_id = timer_round.team_id
+    game_id = timer_round.game_id
+    db.delete(timer_round)
+    db.flush()
+
+    remaining_rounds: Sequence[TimerRound] = db.scalars(
+        select(TimerRound)
+        .where(TimerRound.team_id == team_id, TimerRound.game_id == game_id)
+        .order_by(TimerRound.created_at.asc(), TimerRound.id.asc())
+    ).all()
+    for index, round_item in enumerate(remaining_rounds, start=1):
+        round_item.round_number = index
+
+    db.commit()
+
+    leaderboard = get_leaderboard(db)
+    await leaderboard_connections.broadcast_json(leaderboard.model_dump(mode="json"))
 
 
 @app.get("/players/{player_id}", response_model=PlayerResponse)

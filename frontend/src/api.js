@@ -212,6 +212,53 @@ export async function submitScore(token, teamId, gameId, delta, reason) {
   return response.json();
 }
 
+export async function registerTimerRound(token, teamId, gameId, durationMilliseconds) {
+  const response = await fetch(`${API_BASE_URL}/timer-rounds`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      team_id: Number(teamId),
+      game_id: Number(gameId),
+      duration_milliseconds: Number(durationMilliseconds),
+    }),
+  });
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload.detail || "Unable to register timer round");
+  }
+
+  return response.json();
+}
+
+export async function deleteTimerRound(token, timerRoundId) {
+  const response = await fetch(`${API_BASE_URL}/timer-rounds/${timerRoundId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload.detail || "Unable to delete timer round");
+  }
+}
+
+export async function fetchTimerRounds(teamId, gameId) {
+  const params = new URLSearchParams();
+  if (teamId) params.set("team_id", String(teamId));
+  if (gameId) params.set("game_id", String(gameId));
+
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+  const response = await fetch(`${API_BASE_URL}/timer-rounds${suffix}`);
+  if (!response.ok) {
+    throw new Error("Unable to load timer rounds");
+  }
+  return response.json();
+}
+
 export async function fetchLeaderboard() {
   const response = await fetch(`${API_BASE_URL}/leaderboard`);
   if (!response.ok) {
