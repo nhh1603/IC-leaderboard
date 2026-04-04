@@ -3,8 +3,11 @@ import { useEffect, useState } from "react";
 import { Navigate, NavLink, Route, Routes } from "react-router-dom";
 
 import { getCurrentUser } from "./api";
+import StoryIntro from "./components/StoryIntro";
 import AdminPage from "./pages/AdminPage";
 import PlayerPage from "./pages/PlayerPage";
+
+const INTRO_SEEN_KEY = "ic_story_intro_seen_v1";
 
 function RequireAdmin({ token, setAdminToken, children }) {
   const [accessState, setAccessState] = useState("checking");
@@ -53,6 +56,19 @@ function RequireViewer({ token, children }) {
 export default function App() {
   const [adminToken, setAdminToken] = useState(() => window.localStorage.getItem("admin_token") || "");
   const [viewerToken, setViewerToken] = useState(() => window.localStorage.getItem("viewer_token") || "");
+  const [showIntro, setShowIntro] = useState(false);
+
+  useEffect(() => {
+    const hasSeenIntro = window.localStorage.getItem(INTRO_SEEN_KEY) === "true";
+    if (!hasSeenIntro) {
+      setShowIntro(true);
+    }
+  }, []);
+
+  const finishIntro = () => {
+    window.localStorage.setItem(INTRO_SEEN_KEY, "true");
+    setShowIntro(false);
+  };
 
   useEffect(() => {
     if (adminToken) {
@@ -72,6 +88,8 @@ export default function App() {
 
   return (
     <main className="app-shell">
+      {showIntro ? <StoryIntro onFinish={finishIntro} /> : null}
+
       <header className="app-header">
         <h1>IC Leaderboard</h1>
         <nav className="tabs">

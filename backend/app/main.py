@@ -14,11 +14,13 @@ from app.game_loader import load_games_from_config
 from app.game_loader import get_game_clues
 from app.team_loader import load_teams_from_config, normalize_username
 from app.leaderboard import get_leaderboard
-from app.models import ClueAward, Game, Player, ScoreEvent, Team, TimerRound
+from app.models import ClueAward, Game, GameSession, Player, ScoreEvent, Team, TimerRound
 from app.schemas import (
     ClueAwardResponse,
     GameCreateRequest,
     GameResponse,
+    GameSessionResponse,
+    GameSessionStartRequest,
     GameUpdateRequest,
     LeaderboardResponse,
     LoginRequest,
@@ -564,6 +566,18 @@ async def add_score(
 
     sync_clue_awards_for_score(db, team, game, payload.delta)
 
+    # End any active game session for this team+game combo
+    active_session = db.scalars(
+        select(GameSession).where(
+            GameSession.team_id == payload.team_id,
+            GameSession.game_id == payload.game_id,
+            GameSession.is_active == True,
+        )
+    ).first()
+    if active_session:
+        active_session.is_active = False
+        active_session.ended_at = func.now()
+
     db.commit()
     db.refresh(score_event)
 
@@ -571,6 +585,105 @@ async def add_score(
     await leaderboard_connections.broadcast_json(leaderboard.model_dump(mode="json"))
 
     return score_event
+
+
+@app.post("/games/sessions/start", response_model=GameSessionResponse)
+async def start_game_session(
+    payload: GameSessionStartRequest,
+    _: str = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> GameSession:
+    team = db.get(Team, payload.team_id)
+    if team is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
+
+    game = db.get(Game, payload.game_id)
+    if game is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Game not found")
+
+    # A team can have only one active game at a time.
+    active_for_team = db.scalars(
+        select(GameSession).where(
+            GameSession.team_id == payload.team_id,
+            GameSession.is_active == True,
+        )
+    ).all()
+    for running in active_for_team:
+        if running.game_id != payload.game_id:
+            running.is_active = False
+            running.ended_at = func.now()
+
+    # Persist unlock forever by reusing one row per team+game.
+    session = db.scalars(
+        select(GameSession).where(
+            GameSession.team_id == payload.team_id,
+            GameSession.game_id == payload.game_id,
+        )
+    ).first()
+    if session is None:
+        session = GameSession(team_id=payload.team_id, game_id=payload.game_id)
+        db.add(session)
+    else:
+        session.is_active = True
+        session.ended_at = None
+
+    db.commit()
+    db.refresh(session)
+
+    leaderboard = get_leaderboard(db)
+    await leaderboard_connections.broadcast_json(leaderboard.model_dump(mode="json"))
+
+    return session
+
+
+@app.post("/games/sessions/{session_id}/end", response_model=GameSessionResponse)
+async def end_game_session(
+    session_id: int,
+    _: str = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> GameSession:
+    session = db.get(GameSession, session_id)
+    if session is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+
+    session.is_active = False
+    session.ended_at = func.now()
+    db.commit()
+    db.refresh(session)
+
+    leaderboard = get_leaderboard(db)
+    await leaderboard_connections.broadcast_json(leaderboard.model_dump(mode="json"))
+
+    return session
+
+
+@app.get("/games/sessions/team/{team_id}", response_model=GameSessionResponse | None)
+def get_team_active_session(
+    team_id: int,
+    _: tuple[str, str] = Depends(require_token),
+    db: Session = Depends(get_db),
+) -> GameSession | None:
+    session = db.scalars(
+        select(GameSession).where(
+            GameSession.team_id == team_id,
+            GameSession.is_active == True,
+        )
+    ).first()
+    return session if session else None
+
+
+@app.get("/games/sessions/team/{team_id}/started", response_model=list[GameSessionResponse])
+def get_team_started_sessions(
+    team_id: int,
+    _: tuple[str, str] = Depends(require_token),
+    db: Session = Depends(get_db),
+) -> list[GameSession]:
+    rows = db.scalars(
+        select(GameSession)
+        .where(GameSession.team_id == team_id)
+        .order_by(GameSession.started_at.asc(), GameSession.id.asc())
+    ).all()
+    return list(rows)
 
 
 @app.get("/leaderboard", response_model=LeaderboardResponse)

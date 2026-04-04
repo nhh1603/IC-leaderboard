@@ -17,6 +17,7 @@ class Game(Base):
     score_events: Mapped[list["ScoreEvent"]] = relationship(back_populates="game", cascade="all, delete-orphan")
     timer_rounds: Mapped[list["TimerRound"]] = relationship(back_populates="game", cascade="all, delete-orphan")
     clue_awards: Mapped[list["ClueAward"]] = relationship(back_populates="game", cascade="all, delete-orphan")
+    game_sessions: Mapped[list["GameSession"]] = relationship(back_populates="game", cascade="all, delete-orphan")
 
 
 class Team(Base):
@@ -33,6 +34,7 @@ class Team(Base):
     score_events: Mapped[list["ScoreEvent"]] = relationship(back_populates="team", cascade="all, delete-orphan")
     timer_rounds: Mapped[list["TimerRound"]] = relationship(back_populates="team", cascade="all, delete-orphan")
     clue_awards: Mapped[list["ClueAward"]] = relationship(back_populates="team", cascade="all, delete-orphan")
+    game_sessions: Mapped[list["GameSession"]] = relationship(back_populates="team", cascade="all, delete-orphan")
 
 
 class Player(Base):
@@ -87,3 +89,18 @@ class ClueAward(Base):
 
     team: Mapped[Team] = relationship(back_populates="clue_awards")
     game: Mapped[Game] = relationship(back_populates="clue_awards")
+
+
+class GameSession(Base):
+    __tablename__ = "game_sessions"
+    __table_args__ = (UniqueConstraint("team_id", "game_id", name="uq_active_game_session"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    team_id: Mapped[int] = mapped_column(ForeignKey("teams.id", ondelete="CASCADE"), index=True)
+    game_id: Mapped[int] = mapped_column(ForeignKey("games.id", ondelete="CASCADE"), index=True)
+    is_active: Mapped[bool] = mapped_column(default=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    team: Mapped[Team] = relationship(back_populates="game_sessions")
+    game: Mapped[Game] = relationship(back_populates="game_sessions")

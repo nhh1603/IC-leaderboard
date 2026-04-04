@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { fetchLeaderboard, fetchMyClues, fetchPlayers, fetchTeams, getCurrentUser, getWsLeaderboardUrl, login } from "../api";
+import StoryTab from "../components/StoryTab";
 
 const TOTAL_TAB_ID = "__total__";
 
@@ -155,6 +156,8 @@ function PlayerLeaderboard({ viewerToken, clearViewerToken }) {
       if (previousGameId && incoming.some((game) => game.game_id === previousGameId)) return previousGameId;
       return TOTAL_TAB_ID;
     });
+    // Refresh clues when leaderboard updates (e.g., after score submission)
+    loadMyClues();
   };
 
   const toggleTeam = (teamId) => {
@@ -323,6 +326,13 @@ function PlayerLeaderboard({ viewerToken, clearViewerToken }) {
           </button>
           <button
             type="button"
+            className={activeViewTab === "story" ? "sidebar-tab active" : "sidebar-tab"}
+            onClick={() => selectViewTab("story")}
+          >
+            Story
+          </button>
+          <button
+            type="button"
             className={activeViewTab === "clues" ? "sidebar-tab active" : "sidebar-tab"}
             onClick={() => selectViewTab("clues")}
           >
@@ -363,6 +373,10 @@ function PlayerLeaderboard({ viewerToken, clearViewerToken }) {
                 </div>
               )}
             </section>
+          ) : null}
+
+          {activeViewTab === "story" ? (
+            <StoryTab games={games} currentTeamId={currentTeamId} viewerToken={viewerToken} />
           ) : null}
 
           {activeViewTab === "leaderboard" && games.length > 0 && (

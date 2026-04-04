@@ -147,3 +147,20 @@ class GameLeaderboard(BaseModel):
 class LeaderboardResponse(BaseModel):
     generated_at: datetime
     games: list[GameLeaderboard]
+
+
+class GameSessionStartRequest(BaseModel):
+    team_id: int
+    game_id: int
+
+
+class GameSessionResponse(BaseModel):
+    id: int
+    team_id: int
+    game_id: int
+    is_active: bool
+    started_at: datetime
+    ended_at: datetime | None
+
+    class Config:
+        from_attributes = True

@@ -10,6 +10,7 @@ import {
   deletePlayer,
   deleteTimerRound,
   deleteTeam,
+  endGameSession,
   fetchGames,
   fetchPlayers,
   fetchTimerRounds,
@@ -17,6 +18,7 @@ import {
   getCurrentUser,
   login,
   registerTimerRound,
+  startGameSession,
   submitScore,
   updateGame,
   updatePlayer,
@@ -71,6 +73,7 @@ export default function AdminPage({ adminToken, setAdminToken, loginOnly = false
 
   const [statusText, setStatusText] = useState("");
   const [errorText, setErrorText] = useState("");
+  const [activeGameSession, setActiveGameSession] = useState(null);
 
   const isLoggedIn = useMemo(() => Boolean(adminToken), [adminToken]);
 
@@ -320,6 +323,34 @@ export default function AdminPage({ adminToken, setAdminToken, loginOnly = false
     try {
       await submitScore(adminToken, selectedTeamId, selectedGameId, delta, reason);
       setStatusText("Score submitted");
+      // Game session will be ended automatically by the backend
+      setActiveGameSession(null);
+    } catch (err) {
+      setErrorText(err.message);
+    }
+  };
+
+  const handleStartGame = async () => {
+    if (!adminToken || !selectedTeamId || !selectedGameId) return;
+    setErrorText("");
+    setStatusText("");
+    try {
+      const session = await startGameSession(adminToken, selectedTeamId, selectedGameId);
+      setActiveGameSession(session);
+      setStatusText("Game started! Story should appear for the team.");
+    } catch (err) {
+      setErrorText(err.message);
+    }
+  };
+
+  const handleEndGame = async () => {
+    if (!adminToken || !activeGameSession) return;
+    setErrorText("");
+    setStatusText("");
+    try {
+      await endGameSession(adminToken, activeGameSession.id);
+      setActiveGameSession(null);
+      setStatusText("Game ended");
     } catch (err) {
       setErrorText(err.message);
     }
@@ -401,6 +432,11 @@ export default function AdminPage({ adminToken, setAdminToken, loginOnly = false
   }, [selectedTeamId, selectedGameId]);
 
   const timerDisplay = timerRunning ? liveElapsed : stoppedElapsed;
+  const canSubmitForSelection = Boolean(
+    activeGameSession
+      && String(activeGameSession.team_id) === String(selectedTeamId)
+      && String(activeGameSession.game_id) === String(selectedGameId)
+  );
 
   return (
     <section className="panel">
@@ -585,7 +621,8 @@ export default function AdminPage({ adminToken, setAdminToken, loginOnly = false
             {activeTab === "score" && (
               <>
                 <h3>Submit score</h3>
-                <form className="form-grid" onSubmit={handleSubmitScore}>
+                
+                <div className="form-grid" style={{ marginBottom: "16px" }}>
                   <label>
                     Team
                     <select value={selectedTeamId} onChange={(e) => setSelectedTeamId(e.target.value)} required>
@@ -600,37 +637,34 @@ export default function AdminPage({ adminToken, setAdminToken, loginOnly = false
                       {games.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
                     </select>
                   </label>
-                  <label>
-                    Stars won (0-3)
-                    <input
-                      type="number"
-                      min="0"
-                      max="3"
-                      step="1"
-                      value={delta}
-                      onChange={(e) => setDelta(e.target.value)}
-                      required
-                    />
-                  </label>
-                  <label>
-                    Reason
-                    <input value={reason} onChange={(e) => setReason(e.target.value)} maxLength={200} />
-                  </label>
-                  <button type="submit" disabled={!selectedGameId || !selectedTeamId}>Submit score</button>
-                </form>
+                  <button
+                    type="button"
+                    onClick={handleStartGame}
+                    disabled={!selectedGameId || !selectedTeamId || Boolean(activeGameSession)}
+                    className={activeGameSession ? "compact" : ""}
+                  >
+                    {activeGameSession ? "✓ Game started" : "Start game"}
+                  </button>
+                </div>
+
+                {activeGameSession && (
+                  <p className="success-text" style={{ marginBottom: "12px" }}>
+                    Active: {teams.find(t => t.id === parseInt(selectedTeamId))?.name} - {games.find(g => g.id === parseInt(selectedGameId))?.name}
+                  </p>
+                )}
 
                 <h3>Round timer</h3>
                 <div className="timer-panel">
                   <p className="timer-display">{formatDuration(timerDisplay)}</p>
                   <div className="timer-actions">
-                    <button type="button" onClick={startTimer} disabled={timerRunning || stoppedElapsed > 0}>Start</button>
-                    <button type="button" onClick={resumeTimer} disabled={timerRunning || stoppedElapsed <= 0}>Resume</button>
-                    <button type="button" onClick={stopTimer} disabled={!timerRunning}>Stop</button>
-                    <button type="button" className="compact neutral" onClick={resetTimer} disabled={timerRunning && liveElapsed === 0}>Reset</button>
+                    <button type="button" onClick={startTimer} disabled={timerRunning || stoppedElapsed > 0 || !canSubmitForSelection}>Start</button>
+                    <button type="button" onClick={resumeTimer} disabled={timerRunning || stoppedElapsed <= 0 || !canSubmitForSelection}>Resume</button>
+                    <button type="button" onClick={stopTimer} disabled={!timerRunning || !canSubmitForSelection}>Stop</button>
+                    <button type="button" className="compact neutral" onClick={resetTimer} disabled={(timerRunning && liveElapsed === 0) || !canSubmitForSelection}>Reset</button>
                     <button
                       type="button"
                       onClick={registerCurrentRound}
-                      disabled={!selectedTeamId || !selectedGameId || timerDisplay <= 0 || timerRunning}
+                      disabled={!selectedTeamId || !selectedGameId || timerDisplay <= 0 || timerRunning || !canSubmitForSelection}
                     >
                       Register round
                     </button>
@@ -650,6 +684,26 @@ export default function AdminPage({ adminToken, setAdminToken, loginOnly = false
                     </ul>
                   )}
                 </div>
+
+                <form className="form-grid" onSubmit={handleSubmitScore}>
+                  <label>
+                    Stars won (0-3)
+                    <input
+                      type="number"
+                      min="0"
+                      max="3"
+                      step="1"
+                      value={delta}
+                      onChange={(e) => setDelta(e.target.value)}
+                      required
+                    />
+                  </label>
+                  <label>
+                    Reason
+                    <input value={reason} onChange={(e) => setReason(e.target.value)} maxLength={200} />
+                  </label>
+                  <button type="submit" disabled={!selectedGameId || !selectedTeamId || !canSubmitForSelection}>Submit score</button>
+                </form>
               </>
             )}
 

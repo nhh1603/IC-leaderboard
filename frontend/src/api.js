@@ -291,3 +291,60 @@ export async function fetchMyClues(token) {
   }
   return response.json();
 }
+
+export async function startGameSession(token, teamId, gameId) {
+  const response = await fetch(`${API_BASE_URL}/games/sessions/start`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ team_id: Number(teamId), game_id: Number(gameId) }),
+  });
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload.detail || "Unable to start game session");
+  }
+
+  return response.json();
+}
+
+export async function endGameSession(token, sessionId) {
+  const response = await fetch(`${API_BASE_URL}/games/sessions/${sessionId}/end`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload.detail || "Unable to end game session");
+  }
+
+  return response.json();
+}
+
+export async function getTeamActiveSession(token, teamId) {
+  const response = await fetch(`${API_BASE_URL}/games/sessions/team/${teamId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    if (response.status === 404) return null;
+    throw new Error("Unable to fetch active session");
+  }
+
+  return response.json();
+}
+
+export async function getTeamStartedSessions(token, teamId) {
+  const response = await fetch(`${API_BASE_URL}/games/sessions/team/${teamId}/started`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    throw new Error("Unable to fetch started sessions");
+  }
+
+  return response.json();
+}
