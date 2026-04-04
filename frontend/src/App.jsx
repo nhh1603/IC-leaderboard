@@ -2,11 +2,46 @@ import React from "react";
 import { useEffect, useState } from "react";
 import { Navigate, NavLink, Route, Routes } from "react-router-dom";
 
+import { getCurrentUser } from "./api";
 import AdminPage from "./pages/AdminPage";
 import PlayerPage from "./pages/PlayerPage";
 
-function RequireAdmin({ token, children }) {
-  if (!token) return <Navigate to="/admin/login" replace />;
+function RequireAdmin({ token, setAdminToken, children }) {
+  const [accessState, setAccessState] = useState("checking");
+
+  useEffect(() => {
+    if (!token) {
+      setAccessState("denied");
+      return;
+    }
+
+    let cancelled = false;
+
+    const validateAdmin = async () => {
+      try {
+        const me = await getCurrentUser(token);
+        if (!cancelled) {
+          setAccessState(me.account_type === "admin" ? "allowed" : "denied");
+          if (me.account_type !== "admin") setAdminToken("");
+        }
+      } catch {
+        if (!cancelled) {
+          setAccessState("denied");
+          setAdminToken("");
+        }
+      }
+    };
+
+    setAccessState("checking");
+    validateAdmin();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token, setAdminToken]);
+
+  if (accessState === "checking") return null;
+  if (accessState === "denied") return <Navigate to="/admin/login" replace />;
   return children;
 }
 
@@ -63,7 +98,7 @@ export default function App() {
         <Route
           path="/admin"
           element={
-            <RequireAdmin token={adminToken}>
+            <RequireAdmin token={adminToken} setAdminToken={setAdminToken}>
               <AdminPage adminToken={adminToken} setAdminToken={setAdminToken} />
             </RequireAdmin>
           }
