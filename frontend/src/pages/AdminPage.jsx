@@ -11,7 +11,9 @@ import {
   deleteTimerRound,
   deleteTeam,
   endGameSession,
+  fetchAllPerpetratorSubmissions,
   fetchGames,
+  fetchPerpetratorPortal,
   fetchPlayers,
   fetchTimerRounds,
   fetchTeams,
@@ -20,6 +22,7 @@ import {
   registerTimerRound,
   startGameSession,
   submitScore,
+  updatePerpetratorPortal,
   updateGame,
   updatePlayer,
   updateTeam,
@@ -38,6 +41,11 @@ function formatDuration(milliseconds) {
   const secs = Math.floor((total % 60000) / 1000);
   const ms = total % 1000;
   return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}.${String(ms).padStart(3, "0")}`;
+}
+
+function formatDateTime(iso) {
+  if (!iso) return "-";
+  return new Date(iso).toLocaleString();
 }
 
 export default function AdminPage({ adminToken, setAdminToken, loginOnly = false }) {
@@ -74,6 +82,8 @@ export default function AdminPage({ adminToken, setAdminToken, loginOnly = false
   const [statusText, setStatusText] = useState("");
   const [errorText, setErrorText] = useState("");
   const [activeGameSession, setActiveGameSession] = useState(null);
+  const [perpetratorPortal, setPerpetratorPortal] = useState({ is_open: false, updated_at: null, options: [] });
+  const [perpetratorSubmissions, setPerpetratorSubmissions] = useState([]);
 
   const isLoggedIn = useMemo(() => Boolean(adminToken), [adminToken]);
 
@@ -143,6 +153,27 @@ export default function AdminPage({ adminToken, setAdminToken, loginOnly = false
     loadAllPlayers();
     loadGames();
   }, []);
+
+  const loadPerpetratorData = async () => {
+    if (!adminToken) return;
+    try {
+      const [portal, history] = await Promise.all([
+        fetchPerpetratorPortal(adminToken),
+        fetchAllPerpetratorSubmissions(adminToken),
+      ]);
+      setPerpetratorPortal(portal);
+      setPerpetratorSubmissions(history);
+    } catch (err) {
+      setErrorText(err.message);
+    }
+  };
+
+  useEffect(() => {
+    if (!adminToken) return;
+    loadPerpetratorData();
+    const intervalId = window.setInterval(loadPerpetratorData, 5000);
+    return () => window.clearInterval(intervalId);
+  }, [adminToken]);
 
   const handleLogin = async (event) => {
     event.preventDefault();
@@ -356,6 +387,25 @@ export default function AdminPage({ adminToken, setAdminToken, loginOnly = false
     }
   };
 
+  const handleSelectStars = (value) => {
+    const nextValue = Number(value) || 0;
+    setDelta((previous) => (Number(previous) === nextValue ? 0 : nextValue));
+  };
+
+  const handleTogglePerpetratorPortal = async () => {
+    if (!adminToken) return;
+    setErrorText("");
+    setStatusText("");
+    try {
+      const payload = await updatePerpetratorPortal(adminToken, !perpetratorPortal.is_open);
+      setPerpetratorPortal(payload);
+      setStatusText(payload.is_open ? "Perpetrator portal opened" : "Perpetrator portal closed");
+      await loadPerpetratorData();
+    } catch (err) {
+      setErrorText(err.message);
+    }
+  };
+
   const startTimer = () => {
     if (timerRunning) return;
     if (stoppedElapsed > 0) return;
@@ -483,6 +533,13 @@ export default function AdminPage({ adminToken, setAdminToken, loginOnly = false
               onClick={() => setActiveTab("game")}
             >
               Game
+            </button>
+            <button
+              type="button"
+              className={activeTab === "perpetrator" ? "sidebar-tab active" : "sidebar-tab"}
+              onClick={() => setActiveTab("perpetrator")}
+            >
+              Perpetrator
             </button>
             <button type="button" className="sidebar-tab logout" onClick={handleLogout}>
               Sign out
@@ -687,16 +744,28 @@ export default function AdminPage({ adminToken, setAdminToken, loginOnly = false
 
                 <form className="form-grid" onSubmit={handleSubmitScore}>
                   <label>
-                    Stars won (0-3)
-                    <input
-                      type="number"
-                      min="0"
-                      max="3"
-                      step="1"
-                      value={delta}
-                      onChange={(e) => setDelta(e.target.value)}
-                      required
-                    />
+                    Stars won
+                    <div className="admin-star-picker" role="radiogroup" aria-label="Stars won">
+                      {[1, 2, 3].map((starValue) => (
+                        <button
+                          key={starValue}
+                          type="button"
+                          className={Number(delta) >= starValue ? "admin-star-btn active" : "admin-star-btn"}
+                          onClick={() => handleSelectStars(starValue)}
+                          aria-label={`${starValue} star${starValue > 1 ? "s" : ""}`}
+                        >
+                          ★
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        className="compact outline"
+                        onClick={() => setDelta(0)}
+                      >
+                        Clear
+                      </button>
+                    </div>
+                    <span className="muted">Selected: {Number(delta)} / 3</span>
                   </label>
                   <label>
                     Reason
@@ -754,6 +823,58 @@ export default function AdminPage({ adminToken, setAdminToken, loginOnly = false
                   </label>
                   <button type="submit">Add game</button>
                 </form>
+              </>
+            )}
+
+            {activeTab === "perpetrator" && (
+              <>
+                <h3>Perpetrator portal</h3>
+                <div className="perpetrator-admin-panel">
+                  <div className={perpetratorPortal.is_open ? "perpetrator-status open" : "perpetrator-status closed"}>
+                    <strong>{perpetratorPortal.is_open ? "Portal is open" : "Portal is closed"}</strong>
+                    <p>Last changed: {formatDateTime(perpetratorPortal.updated_at)}</p>
+                  </div>
+                  <div className="perpetrator-admin-actions">
+                    <button type="button" onClick={handleTogglePerpetratorPortal}>
+                      {perpetratorPortal.is_open ? "Close portal" : "Open portal"}
+                    </button>
+                    <button type="button" className="compact outline" onClick={loadPerpetratorData}>
+                      Refresh history
+                    </button>
+                  </div>
+                </div>
+
+                <h3>Team submissions</h3>
+                {perpetratorSubmissions.length === 0 ? (
+                  <p className="muted">No team history available yet.</p>
+                ) : (
+                  <div className="perpetrator-admin-history">
+                    {perpetratorSubmissions.map((teamRow) => (
+                      <article key={teamRow.team_id} className="perpetrator-admin-card">
+                        <header>
+                          <h4>{teamRow.team_name}</h4>
+                          <p>
+                            Final choice:{" "}
+                            <strong>{teamRow.final_choice?.perpetrator_name || "-"}</strong>
+                          </p>
+                        </header>
+
+                        {teamRow.submissions.length === 0 ? (
+                          <p className="muted">No submissions yet.</p>
+                        ) : (
+                          <ul className="perpetrator-history-list">
+                            {teamRow.submissions.map((item) => (
+                              <li key={item.id}>
+                                <span>{item.perpetrator_name}</span>
+                                <span className="muted">{formatDateTime(item.created_at)}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </article>
+                    ))}
+                  </div>
+                )}
               </>
             )}
           </div>

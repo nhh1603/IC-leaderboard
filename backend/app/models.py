@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, UniqueConstraint, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -35,6 +35,10 @@ class Team(Base):
     timer_rounds: Mapped[list["TimerRound"]] = relationship(back_populates="team", cascade="all, delete-orphan")
     clue_awards: Mapped[list["ClueAward"]] = relationship(back_populates="team", cascade="all, delete-orphan")
     game_sessions: Mapped[list["GameSession"]] = relationship(back_populates="team", cascade="all, delete-orphan")
+    perpetrator_submissions: Mapped[list["PerpetratorSubmission"]] = relationship(
+        back_populates="team",
+        cascade="all, delete-orphan",
+    )
 
 
 class Player(Base):
@@ -104,3 +108,28 @@ class GameSession(Base):
 
     team: Mapped[Team] = relationship(back_populates="game_sessions")
     game: Mapped[Game] = relationship(back_populates="game_sessions")
+
+
+class PerpetratorPortal(Base):
+    __tablename__ = "perpetrator_portal"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    is_open: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+
+class PerpetratorSubmission(Base):
+    __tablename__ = "perpetrator_submissions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    team_id: Mapped[int] = mapped_column(ForeignKey("teams.id", ondelete="CASCADE"), index=True)
+    perpetrator_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    image_path: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+    team: Mapped[Team] = relationship(back_populates="perpetrator_submissions")

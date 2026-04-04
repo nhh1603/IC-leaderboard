@@ -757,6 +757,13 @@ button:disabled:hover {
   margin-bottom: 16px;
 }
 
+.total-tab-section {
+  display: flex;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--border);
+}
+
 .view-tabs {
   display: flex;
   gap: 8px;
@@ -769,6 +776,145 @@ button:disabled:hover {
 
 .clues-section {
   margin-top: 8px;
+}
+
+.perpetrator-section {
+  display: grid;
+  gap: 14px;
+  margin-top: 8px;
+}
+
+.perpetrator-status {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  background: var(--surface-soft);
+}
+
+.perpetrator-status.open {
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
+.perpetrator-status.closed {
+  border-color: #fca5a5;
+  background: #fef2f2;
+}
+
+.perpetrator-status strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.perpetrator-status p {
+  margin: 0;
+}
+
+.perpetrator-picker {
+  display: grid;
+  gap: 10px;
+}
+
+.perpetrator-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+}
+
+.perpetrator-card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-soft);
+  padding: 8px;
+  display: grid;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.perpetrator-card input {
+  margin: 0;
+}
+
+.perpetrator-card.selected {
+  border-color: var(--accent);
+  background: #fff1f3;
+}
+
+.perpetrator-image {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.perpetrator-image.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  background: #f8f8f8;
+}
+
+.perpetrator-history {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-soft);
+  padding: 12px;
+}
+
+.perpetrator-history h4 {
+  margin: 0 0 8px;
+  color: var(--accent-strong);
+}
+
+.perpetrator-history-list {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+
+.perpetrator-history-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 6px 8px;
+}
+
+.perpetrator-admin-panel {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.perpetrator-admin-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.perpetrator-admin-history {
+  display: grid;
+  gap: 12px;
+}
+
+.perpetrator-admin-card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-soft);
+  padding: 12px;
+}
+
+.perpetrator-admin-card header h4 {
+  margin: 0;
+}
+
+.perpetrator-admin-card header p {
+  margin: 4px 0 10px;
 }
 
 .clues-list {
@@ -831,6 +977,37 @@ button:disabled:hover {
 
 .star-empty {
   color: #d8c8cb;
+}
+
+.admin-star-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.admin-star-btn {
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border-radius: 10px;
+  font-size: 24px;
+  line-height: 1;
+  background: var(--surface);
+  color: #d8c8cb;
+  border: 1px solid var(--border-strong);
+}
+
+.admin-star-btn.active {
+  color: #f5b301;
+  border-color: #f5b301;
+  background: #fff9e8;
+}
+
+.admin-star-btn:hover {
+  background: #fff6d6;
+  border-color: #e5b100;
+  color: #e5b100;
 }
 
 .total-score-badge {

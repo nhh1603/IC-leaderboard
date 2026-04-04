@@ -1,5 +1,7 @@
 from collections.abc import Sequence
+from pathlib import Path
 import random
+from urllib.parse import quote
 
 from fastapi import Depends, FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,7 +16,7 @@ from app.game_loader import load_games_from_config
 from app.game_loader import get_game_clues
 from app.team_loader import load_teams_from_config, normalize_username
 from app.leaderboard import get_leaderboard
-from app.models import ClueAward, Game, GameSession, Player, ScoreEvent, Team, TimerRound
+from app.models import ClueAward, Game, GameSession, PerpetratorPortal, PerpetratorSubmission, Player, ScoreEvent, Team, TimerRound
 from app.schemas import (
     ClueAwardResponse,
     GameCreateRequest,
@@ -24,6 +26,11 @@ from app.schemas import (
     GameUpdateRequest,
     LeaderboardResponse,
     LoginRequest,
+    PerpetratorPortalResponse,
+    PerpetratorPortalUpdateRequest,
+    PerpetratorSubmissionCreateRequest,
+    PerpetratorSubmissionResponse,
+    PerpetratorOptionResponse,
     PlayerCreateRequest,
     PlayerResponse,
     PlayerUpdateRequest,
@@ -32,6 +39,7 @@ from app.schemas import (
     TimerRoundCreateRequest,
     TimerRoundResponse,
     TeamClueGroupResponse,
+    TeamPerpetratorHistoryResponse,
     TeamCreateRequest,
     TeamResponse,
     TeamUpdateRequest,
@@ -41,6 +49,8 @@ from app.websocket_manager import leaderboard_connections
 
 app = FastAPI(title="INSA Challenge Leaderboard API", version="0.1.0")
 MAX_PLAYERS_PER_TEAM = 8
+PERPETRATORS_DIR = Path(__file__).resolve().parents[2] / "frontend" / "public" / "perpetrators"
+SUPPORTED_PERPETRATOR_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".avif", ".gif"}
 
 
 def _build_unique_username(base_username: str, used_usernames: set[str]) -> str:
@@ -151,6 +161,63 @@ def sync_clue_awards_for_score(db: Session, team: Team, game: Game, stars: int) 
                 clue_text=clue_text,
             )
         )
+
+
+def get_or_create_perpetrator_portal(db: Session) -> PerpetratorPortal:
+    portal = db.get(PerpetratorPortal, 1)
+    if portal is None:
+        portal = PerpetratorPortal(id=1, is_open=False)
+        db.add(portal)
+        db.commit()
+        db.refresh(portal)
+    return portal
+
+
+def serialize_perpetrator_submission(item: PerpetratorSubmission, team_name: str) -> PerpetratorSubmissionResponse:
+    return PerpetratorSubmissionResponse(
+        id=item.id,
+        team_id=item.team_id,
+        team_name=team_name,
+        perpetrator_name=item.perpetrator_name,
+        image_path=item.image_path,
+        created_at=item.created_at,
+    )
+
+
+def build_team_perpetrator_history(db: Session, team: Team) -> TeamPerpetratorHistoryResponse:
+    rows: Sequence[PerpetratorSubmission] = db.scalars(
+        select(PerpetratorSubmission)
+        .where(PerpetratorSubmission.team_id == team.id)
+        .order_by(PerpetratorSubmission.created_at.asc(), PerpetratorSubmission.id.asc())
+    ).all()
+
+    serialized = [serialize_perpetrator_submission(item, team.name) for item in rows]
+    return TeamPerpetratorHistoryResponse(
+        team_id=team.id,
+        team_name=team.name,
+        final_choice=serialized[-1] if serialized else None,
+        submissions=serialized,
+    )
+
+
+def list_perpetrator_options() -> list[dict[str, str | None]]:
+    if not PERPETRATORS_DIR.exists() or not PERPETRATORS_DIR.is_dir():
+        return []
+
+    files = [
+        file
+        for file in PERPETRATORS_DIR.iterdir()
+        if file.is_file() and file.suffix.lower() in SUPPORTED_PERPETRATOR_IMAGE_EXTENSIONS
+    ]
+    files.sort(key=lambda item: item.stem.lower())
+
+    return [
+        {
+            "name": file.stem,
+            "image_path": f"/perpetrators/{quote(file.name)}",
+        }
+        for file in files
+    ]
 
 
 @app.get("/health")
@@ -741,6 +808,95 @@ def get_my_clues(
         )
 
     return list(grouped.values())
+
+
+@app.get("/perpetrator/portal", response_model=PerpetratorPortalResponse)
+def get_perpetrator_portal(
+    _: tuple[str, str] = Depends(require_token),
+    db: Session = Depends(get_db),
+) -> PerpetratorPortalResponse:
+    portal = get_or_create_perpetrator_portal(db)
+    options = [PerpetratorOptionResponse(**option) for option in list_perpetrator_options()]
+    return PerpetratorPortalResponse(is_open=portal.is_open, updated_at=portal.updated_at, options=options)
+
+
+@app.put("/perpetrator/portal", response_model=PerpetratorPortalResponse)
+def update_perpetrator_portal(
+    payload: PerpetratorPortalUpdateRequest,
+    _: str = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> PerpetratorPortalResponse:
+    portal = get_or_create_perpetrator_portal(db)
+    portal.is_open = payload.is_open
+    db.commit()
+    db.refresh(portal)
+
+    options = [PerpetratorOptionResponse(**option) for option in list_perpetrator_options()]
+    return PerpetratorPortalResponse(is_open=portal.is_open, updated_at=portal.updated_at, options=options)
+
+
+@app.post("/perpetrator/submissions", response_model=PerpetratorSubmissionResponse)
+def submit_perpetrator_guess(
+    payload: PerpetratorSubmissionCreateRequest,
+    auth_user: tuple[str, str] = Depends(require_token),
+    db: Session = Depends(get_db),
+) -> PerpetratorSubmissionResponse:
+    username, account_type = auth_user
+    if account_type != "team":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only team accounts can submit")
+
+    team = db.scalars(select(Team).where(Team.username == username)).first()
+    if team is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
+
+    portal = get_or_create_perpetrator_portal(db)
+    if not portal.is_open:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Perpetrator portal is closed")
+
+    selected_name = payload.perpetrator_name.strip()
+    if not selected_name:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Perpetrator name is required")
+
+    option_by_name = {option["name"]: option for option in list_perpetrator_options()}
+    option = option_by_name.get(selected_name)
+    if option is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid perpetrator option")
+
+    row = PerpetratorSubmission(
+        team_id=team.id,
+        perpetrator_name=selected_name,
+        image_path=option.get("image_path"),
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+
+    return serialize_perpetrator_submission(row, team.name)
+
+
+@app.get("/perpetrator/me", response_model=TeamPerpetratorHistoryResponse)
+def get_my_perpetrator_submissions(
+    auth_user: tuple[str, str] = Depends(require_token),
+    db: Session = Depends(get_db),
+) -> TeamPerpetratorHistoryResponse:
+    username, account_type = auth_user
+    if account_type != "team":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only team accounts can access this route")
+
+    team = db.scalars(select(Team).where(Team.username == username)).first()
+    if team is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
+
+    return build_team_perpetrator_history(db, team)
+
+
+@app.get("/perpetrator/submissions", response_model=list[TeamPerpetratorHistoryResponse])
+def get_all_perpetrator_submissions(
+    _: str = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[TeamPerpetratorHistoryResponse]:
+    teams: Sequence[Team] = db.scalars(select(Team).order_by(Team.created_at.asc(), Team.id.asc())).all()
+    return [build_team_perpetrator_history(db, team) for team in teams]
 
 
 @app.websocket("/ws/leaderboard")

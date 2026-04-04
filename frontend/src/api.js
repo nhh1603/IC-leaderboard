@@ -348,3 +348,77 @@ export async function getTeamStartedSessions(token, teamId) {
 
   return response.json();
 }
+
+export async function fetchPerpetratorPortal(token) {
+  const response = await fetch(`${API_BASE_URL}/perpetrator/portal`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    throw new Error("Unable to load perpetrator portal");
+  }
+
+  return response.json();
+}
+
+export async function updatePerpetratorPortal(token, isOpen) {
+  const response = await fetch(`${API_BASE_URL}/perpetrator/portal`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ is_open: Boolean(isOpen) }),
+  });
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload.detail || "Unable to update perpetrator portal");
+  }
+
+  return response.json();
+}
+
+export async function submitPerpetratorGuess(token, perpetratorName) {
+  const response = await fetch(`${API_BASE_URL}/perpetrator/submissions`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ perpetrator_name: perpetratorName }),
+  });
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload.detail || "Unable to submit perpetrator guess");
+  }
+
+  return response.json();
+}
+
+export async function fetchMyPerpetratorSubmissions(token) {
+  const response = await fetch(`${API_BASE_URL}/perpetrator/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload.detail || "Unable to load perpetrator submissions");
+  }
+
+  return response.json();
+}
+
+export async function fetchAllPerpetratorSubmissions(token) {
+  const response = await fetch(`${API_BASE_URL}/perpetrator/submissions`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload.detail || "Unable to load all perpetrator submissions");
+  }
+
+  return response.json();
+}

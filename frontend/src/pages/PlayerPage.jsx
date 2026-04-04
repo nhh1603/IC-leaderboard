@@ -2,7 +2,18 @@ import React from "react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { fetchLeaderboard, fetchMyClues, fetchPlayers, fetchTeams, getCurrentUser, getWsLeaderboardUrl, login } from "../api";
+import {
+  fetchLeaderboard,
+  fetchMyClues,
+  fetchMyPerpetratorSubmissions,
+  fetchPerpetratorPortal,
+  fetchPlayers,
+  fetchTeams,
+  getCurrentUser,
+  getWsLeaderboardUrl,
+  login,
+  submitPerpetratorGuess,
+} from "../api";
 import StoryTab from "../components/StoryTab";
 
 const TOTAL_TAB_ID = "__total__";
@@ -107,6 +118,10 @@ function PlayerLeaderboard({ viewerToken, clearViewerToken }) {
   const [lastUpdated, setLastUpdated] = useState(null);
   const [connectionState, setConnectionState] = useState("connecting");
   const [error, setError] = useState("");
+  const [perpetratorPortal, setPerpetratorPortal] = useState({ is_open: false, options: [], updated_at: null });
+  const [myPerpetratorHistory, setMyPerpetratorHistory] = useState({ submissions: [], final_choice: null });
+  const [selectedPerpetratorName, setSelectedPerpetratorName] = useState("");
+  const [isSubmittingPerpetrator, setIsSubmittingPerpetrator] = useState(false);
 
   const loadViewerTeam = async () => {
     try {
@@ -147,6 +162,31 @@ function PlayerLeaderboard({ viewerToken, clearViewerToken }) {
     }
   };
 
+  const loadPerpetratorPortal = async () => {
+    try {
+      const payload = await fetchPerpetratorPortal(viewerToken);
+      setPerpetratorPortal(payload);
+    } catch {
+      setPerpetratorPortal({ is_open: false, options: [], updated_at: null });
+    }
+  };
+
+  const loadMyPerpetratorHistory = async () => {
+    if (currentTeamId === null) {
+      setMyPerpetratorHistory({ submissions: [], final_choice: null });
+      return;
+    }
+    try {
+      const payload = await fetchMyPerpetratorSubmissions(viewerToken);
+      setMyPerpetratorHistory(payload);
+      if (payload.final_choice?.perpetrator_name) {
+        setSelectedPerpetratorName(payload.final_choice.perpetrator_name);
+      }
+    } catch {
+      setMyPerpetratorHistory({ submissions: [], final_choice: null });
+    }
+  };
+
   const applySnapshot = (payload) => {
     const incoming = payload.games || [];
     setGames(incoming);
@@ -158,6 +198,25 @@ function PlayerLeaderboard({ viewerToken, clearViewerToken }) {
     });
     // Refresh clues when leaderboard updates (e.g., after score submission)
     loadMyClues();
+    if (currentTeamId !== null) {
+      loadMyPerpetratorHistory();
+    }
+  };
+
+  const handleSubmitPerpetrator = async (event) => {
+    event.preventDefault();
+    if (!selectedPerpetratorName || !perpetratorPortal.is_open || currentTeamId === null) return;
+
+    setIsSubmittingPerpetrator(true);
+    setError("");
+    try {
+      await submitPerpetratorGuess(viewerToken, selectedPerpetratorName);
+      await loadMyPerpetratorHistory();
+    } catch (err) {
+      setError(err.message || "Unable to submit perpetrator choice");
+    } finally {
+      setIsSubmittingPerpetrator(false);
+    }
   };
 
   const toggleTeam = (teamId) => {
@@ -238,6 +297,7 @@ function PlayerLeaderboard({ viewerToken, clearViewerToken }) {
     loadPlayers();
     loadViewerTeam();
     loadMyClues();
+    loadPerpetratorPortal();
     loadSnapshot();
     connect();
 
@@ -247,6 +307,21 @@ function PlayerLeaderboard({ viewerToken, clearViewerToken }) {
       if (pollingInterval) window.clearInterval(pollingInterval);
     };
   }, [viewerToken]);
+
+  useEffect(() => {
+    loadMyPerpetratorHistory();
+  }, [currentTeamId, viewerToken]);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      loadPerpetratorPortal();
+      if (currentTeamId !== null) {
+        loadMyPerpetratorHistory();
+      }
+    }, 5000);
+
+    return () => window.clearInterval(intervalId);
+  }, [currentTeamId, viewerToken]);
 
   const stateLabel = useMemo(() => {
     if (connectionState === "live") return "Live";
@@ -338,6 +413,13 @@ function PlayerLeaderboard({ viewerToken, clearViewerToken }) {
           >
             Clues
           </button>
+          <button
+            type="button"
+            className={activeViewTab === "perpetrator" ? "sidebar-tab active" : "sidebar-tab"}
+            onClick={() => selectViewTab("perpetrator")}
+          >
+            Perpetrator
+          </button>
         </aside>
 
         {isSidebarOpen ? (
@@ -379,26 +461,115 @@ function PlayerLeaderboard({ viewerToken, clearViewerToken }) {
             <StoryTab games={games} currentTeamId={currentTeamId} viewerToken={viewerToken} />
           ) : null}
 
+          {activeViewTab === "perpetrator" ? (
+            <section className="perpetrator-section">
+              {currentTeamId === null ? (
+                <p className="muted">Perpetrator submission is available only for team accounts.</p>
+              ) : (
+                <>
+                  <div className={perpetratorPortal.is_open ? "perpetrator-status open" : "perpetrator-status closed"}>
+                    <strong>{perpetratorPortal.is_open ? "Portal is open" : "Portal is closed"}</strong>
+                    <p>
+                      {perpetratorPortal.is_open
+                        ? "You can submit multiple times. Your latest submission is your final choice."
+                        : "Submissions are locked by admin."}
+                    </p>
+                  </div>
+
+                  <form className="perpetrator-picker" onSubmit={handleSubmitPerpetrator}>
+                    <div className="perpetrator-grid">
+                      {perpetratorPortal.options.map((option) => {
+                        const isSelected = selectedPerpetratorName === option.name;
+                        return (
+                          <label
+                            key={option.name}
+                            className={isSelected ? "perpetrator-card selected" : "perpetrator-card"}
+                          >
+                            <input
+                              type="radio"
+                              name="perpetrator"
+                              value={option.name}
+                              checked={isSelected}
+                              onChange={(event) => setSelectedPerpetratorName(event.target.value)}
+                            />
+                            {option.image_path ? (
+                              <img
+                                src={option.image_path}
+                                alt={option.name}
+                                className="perpetrator-image"
+                              />
+                            ) : (
+                              <div className="perpetrator-image placeholder">No photo</div>
+                            )}
+                            <span>{option.name}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={!perpetratorPortal.is_open || !selectedPerpetratorName || isSubmittingPerpetrator}
+                    >
+                      {isSubmittingPerpetrator ? "Submitting..." : "Submit choice"}
+                    </button>
+                  </form>
+
+                  <div className="perpetrator-history">
+                    <h4>Final choice</h4>
+                    {myPerpetratorHistory.final_choice ? (
+                      <p>
+                        <strong>{myPerpetratorHistory.final_choice.perpetrator_name}</strong>
+                        {" "}
+                        ({formatDateTime(myPerpetratorHistory.final_choice.created_at)})
+                      </p>
+                    ) : (
+                      <p className="muted">No submission yet.</p>
+                    )}
+
+                    <h4>Submission history</h4>
+                    {myPerpetratorHistory.submissions?.length ? (
+                      <ul className="perpetrator-history-list">
+                        {myPerpetratorHistory.submissions.map((item) => (
+                          <li key={item.id}>
+                            <span>{item.perpetrator_name}</span>
+                            <span className="muted">{formatDateTime(item.created_at)}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="muted">No submissions in history.</p>
+                    )}
+                  </div>
+                </>
+              )}
+            </section>
+          ) : null}
+
           {activeViewTab === "leaderboard" && games.length > 0 && (
-            <div className="game-tabs">
-              <button
-                type="button"
-                className={activeGameId === TOTAL_TAB_ID ? "game-tab active" : "game-tab"}
-                onClick={() => setActiveGameId(TOTAL_TAB_ID)}
-              >
-                Total
-              </button>
-              {games.map((game) => (
+            <>
+              <div className="total-tab-section">
                 <button
-                  key={game.game_id}
                   type="button"
-                  className={game.game_id === activeGameId ? "game-tab active" : "game-tab"}
-                  onClick={() => setActiveGameId(game.game_id)}
+                  className={activeGameId === TOTAL_TAB_ID ? "game-tab active" : "game-tab"}
+                  onClick={() => setActiveGameId(TOTAL_TAB_ID)}
                 >
-                  {game.game_name}
+                  Total
                 </button>
-              ))}
-            </div>
+              </div>
+              <div className="game-tabs">
+                {games.map((game) => (
+                  <button
+                    key={game.game_id}
+                    type="button"
+                    className={game.game_id === activeGameId ? "game-tab active" : "game-tab"}
+                    onClick={() => setActiveGameId(game.game_id)}
+                  >
+                    {game.game_name}
+                  </button>
+                ))}
+              </div>
+            </>
           )}
 
           {activeViewTab === "leaderboard" ? (

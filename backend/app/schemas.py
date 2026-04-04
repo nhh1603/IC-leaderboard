@@ -164,3 +164,38 @@ class GameSessionResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class PerpetratorOptionResponse(BaseModel):
+    name: str
+    image_path: str | None = None
+
+
+class PerpetratorPortalUpdateRequest(BaseModel):
+    is_open: bool
+
+
+class PerpetratorPortalResponse(BaseModel):
+    is_open: bool
+    updated_at: datetime
+    options: list[PerpetratorOptionResponse]
+
+
+class PerpetratorSubmissionCreateRequest(BaseModel):
+    perpetrator_name: str = Field(min_length=1, max_length=120)
+
+
+class PerpetratorSubmissionResponse(BaseModel):
+    id: int
+    team_id: int
+    team_name: str
+    perpetrator_name: str
+    image_path: str | None = None
+    created_at: datetime
+
+
+class TeamPerpetratorHistoryResponse(BaseModel):
+    team_id: int
+    team_name: str
+    final_choice: PerpetratorSubmissionResponse | None = None
+    submissions: list[PerpetratorSubmissionResponse]

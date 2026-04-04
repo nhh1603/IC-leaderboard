@@ -91,7 +91,6 @@ export default function App() {
       {showIntro ? <StoryIntro onFinish={finishIntro} /> : null}
 
       <header className="app-header">
-        <h1>IC Leaderboard</h1>
         <nav className="tabs">
           <NavLink to="/" className={({ isActive }) => (isActive ? "tab active" : "tab")} end>
             Player View
