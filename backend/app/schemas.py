@@ -43,6 +43,8 @@ class TeamUpdateRequest(BaseModel):
 class TeamResponse(BaseModel):
     id: int
     name: str
+    username: str | None = None
+    config_key: str | None = None
     created_at: datetime
 
     class Config:
@@ -86,6 +88,22 @@ class ScoreResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class ClueAwardResponse(BaseModel):
+    id: int
+    team_id: int
+    game_id: int
+    game_name: str
+    clue_order: int
+    clue_text: str
+    created_at: datetime
+
+
+class TeamClueGroupResponse(BaseModel):
+    game_id: int
+    game_name: str
+    clues: list[ClueAwardResponse]
 
 
 class TimerRoundCreateRequest(BaseModel):

@@ -10,16 +10,30 @@ function RequireAdmin({ token, children }) {
   return children;
 }
 
+function RequireViewer({ token, children }) {
+  if (!token) return <Navigate to="/login" replace />;
+  return children;
+}
+
 export default function App() {
-  const [token, setToken] = useState(() => window.localStorage.getItem("admin_token") || "");
+  const [adminToken, setAdminToken] = useState(() => window.localStorage.getItem("admin_token") || "");
+  const [viewerToken, setViewerToken] = useState(() => window.localStorage.getItem("viewer_token") || "");
 
   useEffect(() => {
-    if (token) {
-      window.localStorage.setItem("admin_token", token);
-      return;
+    if (adminToken) {
+      window.localStorage.setItem("admin_token", adminToken);
+    } else {
+      window.localStorage.removeItem("admin_token");
     }
-    window.localStorage.removeItem("admin_token");
-  }, [token]);
+  }, [adminToken]);
+
+  useEffect(() => {
+    if (viewerToken) {
+      window.localStorage.setItem("viewer_token", viewerToken);
+    } else {
+      window.localStorage.removeItem("viewer_token");
+    }
+  }, [viewerToken]);
 
   return (
     <main className="app-shell">
@@ -36,15 +50,23 @@ export default function App() {
       </header>
 
       <Routes>
-        <Route path="/" element={<PlayerPage />} />
-        <Route path="/admin/login" element={<AdminPage token={token} setToken={setToken} loginOnly />} />
+        <Route path="/login" element={<PlayerPage viewerToken={viewerToken} setViewerToken={setViewerToken} loginOnly />} />
+        <Route
+          path="/"
+          element={
+            <RequireViewer token={viewerToken}>
+              <PlayerPage viewerToken={viewerToken} setViewerToken={setViewerToken} />
+            </RequireViewer>
+          }
+        />
+        <Route path="/admin/login" element={<AdminPage adminToken={adminToken} setAdminToken={setAdminToken} loginOnly />} />
         <Route
           path="/admin"
-          element={(
-            <RequireAdmin token={token}>
-              <AdminPage token={token} setToken={setToken} />
+          element={
+            <RequireAdmin token={adminToken}>
+              <AdminPage adminToken={adminToken} setAdminToken={setAdminToken} />
             </RequireAdmin>
-          )}
+          }
         />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

@@ -279,10 +279,41 @@ body {
   color: var(--accent-strong);
 }
 
+.current-team-row td {
+  background: linear-gradient(135deg, #fff1f3, #ffe3e8);
+  font-weight: 600;
+}
+
+.current-team-row td:first-child {
+  box-shadow: inset 4px 0 0 var(--accent);
+}
+
+.current-team-details td {
+  background: #fff8f9;
+}
+
+.current-team-label {
+  display: inline-flex;
+  margin-left: 10px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
 .panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+.panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .status-pill {
@@ -397,6 +428,40 @@ button:disabled:hover {
   flex-wrap: wrap;
   gap: 6px;
   margin-bottom: 16px;
+}
+
+.view-tabs {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.clues-section {
+  margin-top: 8px;
+}
+
+.clues-list {
+  display: grid;
+  gap: 12px;
+}
+
+.clue-card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-soft);
+  padding: 12px;
+}
+
+.clue-card h4 {
+  margin: 0 0 8px;
+  color: var(--accent-strong);
+}
+
+.clue-card ul {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
 }
 
 .game-tab {

@@ -1,7 +1,8 @@
 import React from "react";
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
-import { fetchLeaderboard, fetchPlayers, getWsLeaderboardUrl } from "../api";
+import { fetchLeaderboard, fetchMyClues, fetchPlayers, fetchTeams, getCurrentUser, getWsLeaderboardUrl, login } from "../api";
 
 const TOTAL_TAB_ID = "__total__";
 
@@ -38,8 +39,66 @@ function renderStars(score) {
   );
 }
 
-export default function PlayerPage() {
-  const [games, setGames] = useState([]);          // list of GameLeaderboard objects
+function PlayerLoginPage({ setViewerToken }) {
+  const navigate = useNavigate();
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [errorText, setErrorText] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setIsLoading(true);
+    setErrorText("");
+
+    try {
+      const payload = await login(username, password);
+      setViewerToken(payload.access_token);
+      navigate("/", { replace: true });
+    } catch (err) {
+      setErrorText(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <section className="panel">
+      <h2>Viewer Login</h2>
+      <p className="muted">Use either the admin account or a team account.</p>
+      <form className="form-grid" onSubmit={handleSubmit}>
+        <label>
+          Username
+          <input
+            value={username}
+            onChange={(event) => setUsername(event.target.value)}
+            placeholder="admin or team username"
+            required
+          />
+        </label>
+        <label>
+          Password
+          <input
+            type="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            placeholder="Password"
+            required
+          />
+        </label>
+        <button type="submit" disabled={isLoading}>{isLoading ? "Signing in..." : "Sign in"}</button>
+      </form>
+      {errorText ? <p className="error-text">{errorText}</p> : null}
+    </section>
+  );
+}
+
+function PlayerLeaderboard({ viewerToken, clearViewerToken }) {
+  const navigate = useNavigate();
+  const [games, setGames] = useState([]);
+  const [activeViewTab, setActiveViewTab] = useState("leaderboard");
+  const [myClues, setMyClues] = useState([]);
+  const [currentTeamId, setCurrentTeamId] = useState(null);
   const [activeGameId, setActiveGameId] = useState(TOTAL_TAB_ID);
   const [playersByTeam, setPlayersByTeam] = useState({});
   const [expandedTeams, setExpandedTeams] = useState(new Set());
@@ -47,13 +106,29 @@ export default function PlayerPage() {
   const [connectionState, setConnectionState] = useState("connecting");
   const [error, setError] = useState("");
 
+  const loadViewerTeam = async () => {
+    try {
+      const viewer = await getCurrentUser(viewerToken);
+      if (viewer.account_type !== "team") {
+        setCurrentTeamId(null);
+        return;
+      }
+
+      const teams = await fetchTeams();
+      const team = teams.find((entry) => entry.username === viewer.username);
+      setCurrentTeamId(team?.id ?? null);
+    } catch {
+      setCurrentTeamId(null);
+    }
+  };
+
   const loadPlayers = async () => {
     try {
       const all = await fetchPlayers();
       const grouped = {};
-      for (const p of all) {
-        if (!grouped[p.team_id]) grouped[p.team_id] = [];
-        grouped[p.team_id].push(p.name);
+      for (const player of all) {
+        if (!grouped[player.team_id]) grouped[player.team_id] = [];
+        grouped[player.team_id].push(player.name);
       }
       setPlayersByTeam(grouped);
     } catch {
@@ -61,23 +136,41 @@ export default function PlayerPage() {
     }
   };
 
+  const loadMyClues = async () => {
+    try {
+      const payload = await fetchMyClues(viewerToken);
+      setMyClues(payload);
+    } catch {
+      setMyClues([]);
+    }
+  };
+
   const applySnapshot = (payload) => {
     const incoming = payload.games || [];
     setGames(incoming);
     setLastUpdated(payload.generated_at || null);
-    setActiveGameId((prev) => {
-      if (prev === TOTAL_TAB_ID) return prev;
-      if (prev && incoming.some((g) => g.game_id === prev)) return prev;
+    setActiveGameId((previousGameId) => {
+      if (previousGameId === TOTAL_TAB_ID) return previousGameId;
+      if (previousGameId && incoming.some((game) => game.game_id === previousGameId)) return previousGameId;
       return TOTAL_TAB_ID;
     });
   };
 
   const toggleTeam = (teamId) => {
-    setExpandedTeams((prev) => {
-      const next = new Set(prev);
-      next.has(teamId) ? next.delete(teamId) : next.add(teamId);
+    setExpandedTeams((previous) => {
+      const next = new Set(previous);
+      if (next.has(teamId)) {
+        next.delete(teamId);
+      } else {
+        next.add(teamId);
+      }
       return next;
     });
+  };
+
+  const handleLogout = () => {
+    clearViewerToken();
+    navigate("/login", { replace: true });
   };
 
   useEffect(() => {
@@ -87,7 +180,7 @@ export default function PlayerPage() {
 
     const loadSnapshot = async () => {
       try {
-        const payload = await fetchLeaderboard();
+        const payload = await fetchLeaderboard(viewerToken);
         applySnapshot(payload);
       } catch (err) {
         setError(err.message);
@@ -100,15 +193,14 @@ export default function PlayerPage() {
     };
 
     const stopPollingFallback = () => {
-      if (pollingInterval) {
-        window.clearInterval(pollingInterval);
-        pollingInterval = undefined;
-      }
+      if (!pollingInterval) return;
+      window.clearInterval(pollingInterval);
+      pollingInterval = undefined;
     };
 
     const connect = () => {
       setConnectionState("connecting");
-      socket = new WebSocket(getWsLeaderboardUrl());
+      socket = new WebSocket(getWsLeaderboardUrl(viewerToken));
 
       socket.onopen = () => {
         setConnectionState("live");
@@ -134,8 +226,10 @@ export default function PlayerPage() {
       socket.onerror = () => setConnectionState("error");
     };
 
-    loadSnapshot();
     loadPlayers();
+    loadViewerTeam();
+    loadMyClues();
+    loadSnapshot();
     connect();
 
     return () => {
@@ -143,7 +237,7 @@ export default function PlayerPage() {
       if (reconnectTimeout) window.clearTimeout(reconnectTimeout);
       if (pollingInterval) window.clearInterval(pollingInterval);
     };
-  }, []);
+  }, [viewerToken]);
 
   const stateLabel = useMemo(() => {
     if (connectionState === "live") return "Live";
@@ -180,26 +274,70 @@ export default function PlayerPage() {
       }
     }
 
-    return Array.from(byTeam.values()).sort((a, b) => {
-      if (b.total_score !== a.total_score) return b.total_score - a.total_score;
-      return a.team_name.localeCompare(b.team_name);
+    return Array.from(byTeam.values()).sort((left, right) => {
+      if (right.total_score !== left.total_score) return right.total_score - left.total_score;
+      return left.team_name.localeCompare(right.team_name);
     });
   }, [games]);
 
-  const activeGame = games.find((g) => g.game_id === activeGameId);
+  const activeGame = games.find((game) => game.game_id === activeGameId);
   const entries = activeGameId === TOTAL_TAB_ID ? totalEntries : (activeGame?.entries ?? []);
 
   return (
     <section className="panel">
       <header className="panel-header">
         <h2>Leaderboard</h2>
-        <div className={`status-pill ${connectionState}`}>{stateLabel}</div>
+        <div className="panel-actions">
+          <div className={`status-pill ${connectionState}`}>{stateLabel}</div>
+          <button type="button" className="compact outline" onClick={handleLogout}>Logout</button>
+        </div>
       </header>
       <p className="muted">Last updated: {formatDateTime(lastUpdated)}</p>
       {error ? <p className="error-text">{error}</p> : null}
 
-      {/* Game tabs */}
-      {games.length > 0 && (
+      <div className="view-tabs">
+        <button
+          type="button"
+          className={activeViewTab === "leaderboard" ? "game-tab active" : "game-tab"}
+          onClick={() => setActiveViewTab("leaderboard")}
+        >
+          Leaderboard
+        </button>
+        <button
+          type="button"
+          className={activeViewTab === "clues" ? "game-tab active" : "game-tab"}
+          onClick={() => setActiveViewTab("clues")}
+        >
+          Clues
+        </button>
+      </div>
+
+      {activeViewTab === "clues" ? (
+        <section className="clues-section">
+          {currentTeamId === null ? (
+            <p className="muted">Clues are available when logged in with a team account.</p>
+          ) : myClues.length === 0 ? (
+            <p className="muted">No clues earned yet. Submit stars from admin to unlock clues.</p>
+          ) : (
+            <div className="clues-list">
+              {myClues.map((group) => (
+                <article key={group.game_id} className="clue-card">
+                  <h4>{group.game_name}</h4>
+                  <ul>
+                    {group.clues.map((clue) => (
+                      <li key={clue.id}>
+                        <strong>Clue {clue.clue_order}:</strong> {clue.clue_text}
+                      </li>
+                    ))}
+                  </ul>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      ) : null}
+
+      {activeViewTab === "leaderboard" && games.length > 0 && (
         <div className="game-tabs">
           <button
             type="button"
@@ -208,19 +346,20 @@ export default function PlayerPage() {
           >
             Total
           </button>
-          {games.map((g) => (
+          {games.map((game) => (
             <button
-              key={g.game_id}
+              key={game.game_id}
               type="button"
-              className={g.game_id === activeGameId ? "game-tab active" : "game-tab"}
-              onClick={() => setActiveGameId(g.game_id)}
+              className={game.game_id === activeGameId ? "game-tab active" : "game-tab"}
+              onClick={() => setActiveGameId(game.game_id)}
             >
-              {g.game_name}
+              {game.game_name}
             </button>
           ))}
         </div>
       )}
 
+      {activeViewTab === "leaderboard" ? (
       <table className="leaderboard-table">
         <thead>
           <tr>
@@ -240,14 +379,21 @@ export default function PlayerPage() {
           ) : (
             entries.flatMap((entry, index) => {
               const isExpanded = expandedTeams.has(entry.team_id);
+              const isCurrentTeam = entry.team_id === currentTeamId;
               const members = playersByTeam[entry.team_id] || [];
               const rounds = entry.time_rounds || [];
+
               return [
-                <tr key={entry.team_id} className="team-row" onClick={() => toggleTeam(entry.team_id)}>
+                <tr
+                  key={entry.team_id}
+                  className={isCurrentTeam ? "team-row current-team-row" : "team-row"}
+                  onClick={() => toggleTeam(entry.team_id)}
+                >
                   <td>{index + 1}</td>
                   <td>
                     <span className="team-toggle">{isExpanded ? "▾" : "▸"}</span>
                     {entry.team_name}
+                    {isCurrentTeam ? <span className="current-team-label">Your team</span> : null}
                   </td>
                   <td>
                     {activeGameId === TOTAL_TAB_ID ? (
@@ -258,8 +404,11 @@ export default function PlayerPage() {
                   </td>
                   <td>{formatDuration(entry.total_time_milliseconds || 0)}</td>
                 </tr>,
-                isExpanded && (
-                  <tr key={`${entry.team_id}-players`} className="players-row">
+                isExpanded ? (
+                  <tr
+                    key={`${entry.team_id}-players`}
+                    className={isCurrentTeam ? "players-row current-team-details" : "players-row"}
+                  >
                     <td />
                     <td colSpan={3}>
                       {members.length === 0 ? (
@@ -287,13 +436,22 @@ export default function PlayerPage() {
                       </div>
                     </td>
                   </tr>
-                ),
+                ) : null,
               ].filter(Boolean);
             })
           )}
         </tbody>
       </table>
+      ) : null}
     </section>
   );
+}
+
+export default function PlayerPage({ viewerToken, setViewerToken, loginOnly = false }) {
+  if (loginOnly) {
+    return <PlayerLoginPage setViewerToken={setViewerToken} />;
+  }
+
+  return <PlayerLeaderboard viewerToken={viewerToken} clearViewerToken={() => setViewerToken("")} />;
 }
 

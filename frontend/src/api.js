@@ -5,8 +5,8 @@ export function getApiBaseUrl() {
   return API_BASE_URL;
 }
 
-export function getWsLeaderboardUrl() {
-  return `${WS_BASE_URL}/ws/leaderboard`;
+export function getWsLeaderboardUrl(token) {
+  return `${WS_BASE_URL}/ws/leaderboard?token=${encodeURIComponent(token)}`;
 }
 
 export async function login(username, password) {
@@ -18,6 +18,19 @@ export async function login(username, password) {
 
   if (!response.ok) {
     throw new Error("Invalid username or password");
+  }
+
+  return response.json();
+}
+
+export async function getCurrentUser(token) {
+  const response = await fetch(`${API_BASE_URL}/auth/me`, {
+    method: "GET",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to get current user");
   }
 
   return response.json();
@@ -259,10 +272,22 @@ export async function fetchTimerRounds(teamId, gameId) {
   return response.json();
 }
 
-export async function fetchLeaderboard() {
-  const response = await fetch(`${API_BASE_URL}/leaderboard`);
+export async function fetchLeaderboard(token) {
+  const response = await fetch(`${API_BASE_URL}/leaderboard`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
   if (!response.ok) {
     throw new Error("Unable to load leaderboard");
+  }
+  return response.json();
+}
+
+export async function fetchMyClues(token) {
+  const response = await fetch(`${API_BASE_URL}/clues/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) {
+    throw new Error("Unable to load clues");
   }
   return response.json();
 }

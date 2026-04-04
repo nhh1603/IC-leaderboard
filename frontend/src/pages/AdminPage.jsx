@@ -14,6 +14,7 @@ import {
   fetchPlayers,
   fetchTimerRounds,
   fetchTeams,
+  getCurrentUser,
   login,
   registerTimerRound,
   submitScore,
@@ -37,7 +38,7 @@ function formatDuration(milliseconds) {
   return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}.${String(ms).padStart(3, "0")}`;
 }
 
-export default function AdminPage({ token, setToken, loginOnly = false }) {
+export default function AdminPage({ adminToken, setAdminToken, loginOnly = false }) {
   const [username, setUsername] = useState("admin");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
@@ -71,7 +72,7 @@ export default function AdminPage({ token, setToken, loginOnly = false }) {
   const [statusText, setStatusText] = useState("");
   const [errorText, setErrorText] = useState("");
 
-  const isLoggedIn = useMemo(() => Boolean(token), [token]);
+  const isLoggedIn = useMemo(() => Boolean(adminToken), [adminToken]);
 
   const playersByTeam = useMemo(() => {
     const grouped = {};
@@ -146,7 +147,11 @@ export default function AdminPage({ token, setToken, loginOnly = false }) {
     setStatusText("");
     try {
       const payload = await login(username, password);
-      setToken(payload.access_token);
+      const currentUser = await getCurrentUser(payload.access_token);
+      if (currentUser.account_type !== "admin") {
+        throw new Error("Admin credentials required for admin view");
+      }
+      setAdminToken(payload.access_token);
       setStatusText("Admin authenticated");
       navigate("/admin", { replace: true });
     } catch (err) {
@@ -155,20 +160,20 @@ export default function AdminPage({ token, setToken, loginOnly = false }) {
   };
 
   const handleLogout = () => {
-    setToken("");
+    setAdminToken("");
     setStatusText("Signed out");
     navigate("/admin/login", { replace: true });
   };
 
   const handleCreateTeam = async (event) => {
     event.preventDefault();
-    if (!token) return;
+    if (!adminToken) return;
     setErrorText("");
     setStatusText("");
 
     const playerNames = parsePlayerNames(newTeamPlayersText);
     try {
-      const payload = await createTeam(token, newTeamName, playerNames);
+      const payload = await createTeam(adminToken, newTeamName, playerNames);
       setNewTeamName("");
       setNewTeamPlayersText("");
       setStatusText(`Created team: ${payload.name}`);
@@ -181,11 +186,11 @@ export default function AdminPage({ token, setToken, loginOnly = false }) {
 
   const handleUpdateTeam = async (event) => {
     event.preventDefault();
-    if (!token || !editingTeam) return;
+    if (!adminToken || !editingTeam) return;
     setErrorText("");
     setStatusText("");
     try {
-      const payload = await updateTeam(token, editingTeam.id, editingTeam.name);
+      const payload = await updateTeam(adminToken, editingTeam.id, editingTeam.name);
       setEditingTeam(null);
       setStatusText(`Updated team: ${payload.name}`);
       await loadTeams();
@@ -195,12 +200,12 @@ export default function AdminPage({ token, setToken, loginOnly = false }) {
   };
 
   const handleDeleteTeam = async (teamId, teamName) => {
-    if (!token) return;
+    if (!adminToken) return;
     if (!window.confirm(`Delete team "${teamName}"? This will remove players and scores.`)) return;
     setErrorText("");
     setStatusText("");
     try {
-      await deleteTeam(token, teamId);
+      await deleteTeam(adminToken, teamId);
       setStatusText(`Deleted team: ${teamName}`);
       if (String(teamId) === String(selectedTeamId)) setSelectedTeamId("");
       await Promise.all([loadTeams(), loadAllPlayers()]);
@@ -210,14 +215,14 @@ export default function AdminPage({ token, setToken, loginOnly = false }) {
   };
 
   const handleCreatePlayer = async (teamId) => {
-    if (!token) return;
+    if (!adminToken) return;
     const name = (newPlayerByTeam[teamId] || "").trim();
     if (!name) return;
 
     setErrorText("");
     setStatusText("");
     try {
-      const payload = await createPlayer(token, teamId, name);
+      const payload = await createPlayer(adminToken, teamId, name);
       setStatusText(`Added player: ${payload.name}`);
       setNewPlayerByTeam((prev) => ({ ...prev, [teamId]: "" }));
       await loadAllPlayers();
@@ -232,11 +237,11 @@ export default function AdminPage({ token, setToken, loginOnly = false }) {
   };
 
   const handleUpdatePlayer = async (player) => {
-    if (!token || !editingPlayerName.trim()) return;
+    if (!adminToken || !editingPlayerName.trim()) return;
     setErrorText("");
     setStatusText("");
     try {
-      const payload = await updatePlayer(token, player.id, player.team_id, editingPlayerName.trim());
+      const payload = await updatePlayer(adminToken, player.id, player.team_id, editingPlayerName.trim());
       setStatusText(`Updated player: ${payload.name}`);
       setEditingPlayerId(null);
       setEditingPlayerName("");
@@ -247,13 +252,13 @@ export default function AdminPage({ token, setToken, loginOnly = false }) {
   };
 
   const handleDeletePlayer = async (player) => {
-    if (!token) return;
+    if (!adminToken) return;
     if (!window.confirm(`Delete player "${player.name}"?`)) return;
 
     setErrorText("");
     setStatusText("");
     try {
-      await deletePlayer(token, player.id);
+      await deletePlayer(adminToken, player.id);
       setStatusText(`Deleted player: ${player.name}`);
       await loadAllPlayers();
     } catch (err) {
@@ -263,11 +268,11 @@ export default function AdminPage({ token, setToken, loginOnly = false }) {
 
   const handleCreateGame = async (event) => {
     event.preventDefault();
-    if (!token) return;
+    if (!adminToken) return;
     setErrorText("");
     setStatusText("");
     try {
-      const payload = await createGame(token, newGameName);
+      const payload = await createGame(adminToken, newGameName);
       setNewGameName("");
       setStatusText(`Created game: ${payload.name}`);
       await loadGames();
@@ -279,11 +284,11 @@ export default function AdminPage({ token, setToken, loginOnly = false }) {
 
   const handleUpdateGame = async (event) => {
     event.preventDefault();
-    if (!token || !editingGame) return;
+    if (!adminToken || !editingGame) return;
     setErrorText("");
     setStatusText("");
     try {
-      const payload = await updateGame(token, editingGame.id, editingGame.name);
+      const payload = await updateGame(adminToken, editingGame.id, editingGame.name);
       setEditingGame(null);
       setStatusText(`Updated game: ${payload.name}`);
       await loadGames();
@@ -293,12 +298,12 @@ export default function AdminPage({ token, setToken, loginOnly = false }) {
   };
 
   const handleDeleteGame = async (gameId, gameName) => {
-    if (!token) return;
+    if (!adminToken) return;
     if (!window.confirm(`Delete game "${gameName}"? All its scores will be removed.`)) return;
     setErrorText("");
     setStatusText("");
     try {
-      await deleteGame(token, gameId);
+      await deleteGame(adminToken, gameId);
       setStatusText(`Deleted game: ${gameName}`);
       if (selectedGameId === String(gameId)) setSelectedGameId("");
       await loadGames();
@@ -309,11 +314,11 @@ export default function AdminPage({ token, setToken, loginOnly = false }) {
 
   const handleSubmitScore = async (event) => {
     event.preventDefault();
-    if (!token || !selectedTeamId || !selectedGameId) return;
+    if (!adminToken || !selectedTeamId || !selectedGameId) return;
     setErrorText("");
     setStatusText("");
     try {
-      await submitScore(token, selectedTeamId, selectedGameId, delta, reason);
+      await submitScore(adminToken, selectedTeamId, selectedGameId, delta, reason);
       setStatusText("Score submitted");
     } catch (err) {
       setErrorText(err.message);
@@ -354,12 +359,12 @@ export default function AdminPage({ token, setToken, loginOnly = false }) {
 
   const registerCurrentRound = async () => {
     const duration = timerRunning ? liveElapsed : stoppedElapsed;
-    if (!token || !selectedTeamId || !selectedGameId || duration <= 0) return;
+    if (!adminToken || !selectedTeamId || !selectedGameId || duration <= 0) return;
 
     setErrorText("");
     setStatusText("");
     try {
-      const payload = await registerTimerRound(token, selectedTeamId, selectedGameId, duration);
+      const payload = await registerTimerRound(adminToken, selectedTeamId, selectedGameId, duration);
       setTimerRoundsForSelection((prev) => [...prev, payload]);
       setStatusText(`Registered round ${payload.round_number}: ${formatDuration(payload.duration_milliseconds)}`);
       resetTimer();
@@ -369,13 +374,13 @@ export default function AdminPage({ token, setToken, loginOnly = false }) {
   };
 
   const handleDeleteTimerRound = async (timerRound) => {
-    if (!token || !timerRound?.id) return;
+    if (!adminToken || !timerRound?.id) return;
     if (!window.confirm(`Delete round ${timerRound.round_number}?`)) return;
 
     setErrorText("");
     setStatusText("");
     try {
-      await deleteTimerRound(token, timerRound.id);
+      await deleteTimerRound(adminToken, timerRound.id);
       const refreshed = await fetchTimerRounds(selectedTeamId, selectedGameId);
       setTimerRoundsForSelection(refreshed);
       setStatusText(`Deleted round ${timerRound.round_number}`);
@@ -495,7 +500,10 @@ export default function AdminPage({ token, setToken, loginOnly = false }) {
                               <button type="button" className="compact neutral" onClick={() => setEditingTeam(null)}>Cancel</button>
                             </form>
                           ) : (
-                            <h4>{team.name}</h4>
+                            <div>
+                              <h4>{team.name}</h4>
+                              <p className="muted">Username: {team.username || "-"}</p>
+                            </div>
                           )}
 
                           {!isEditingTeam && (

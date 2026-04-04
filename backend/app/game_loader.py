@@ -34,3 +34,25 @@ def load_games_from_config(db: Session) -> None:
             db.add(Game(name=name, config_key=config_key))
 
     db.commit()
+
+
+def get_game_clues(config_key: str | None) -> list[str]:
+    """Read a game's clues from YAML config. Returns up to 3 non-empty clues."""
+    if not config_key:
+        return []
+
+    config_file = GAMES_DIR / f"{config_key}.yaml"
+    if not config_file.exists():
+        return []
+
+    try:
+        data = yaml.safe_load(config_file.read_text(encoding="utf-8")) or {}
+    except Exception:
+        return []
+
+    raw_clues = data.get("clues", [])
+    if not isinstance(raw_clues, list):
+        return []
+
+    cleaned = [str(clue).strip() for clue in raw_clues if str(clue).strip()]
+    return cleaned[:3]

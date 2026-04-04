@@ -16,6 +16,7 @@ class Game(Base):
 
     score_events: Mapped[list["ScoreEvent"]] = relationship(back_populates="game", cascade="all, delete-orphan")
     timer_rounds: Mapped[list["TimerRound"]] = relationship(back_populates="game", cascade="all, delete-orphan")
+    clue_awards: Mapped[list["ClueAward"]] = relationship(back_populates="game", cascade="all, delete-orphan")
 
 
 class Team(Base):
@@ -23,11 +24,15 @@ class Team(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     name: Mapped[str] = mapped_column(String(80), unique=True, nullable=False, index=True)
+    username: Mapped[str] = mapped_column(String(80), unique=True, nullable=False, index=True)
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    config_key: Mapped[str | None] = mapped_column(String(80), unique=True, nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     players: Mapped[list["Player"]] = relationship(back_populates="team", cascade="all, delete-orphan")
     score_events: Mapped[list["ScoreEvent"]] = relationship(back_populates="team", cascade="all, delete-orphan")
     timer_rounds: Mapped[list["TimerRound"]] = relationship(back_populates="team", cascade="all, delete-orphan")
+    clue_awards: Mapped[list["ClueAward"]] = relationship(back_populates="team", cascade="all, delete-orphan")
 
 
 class Player(Base):
@@ -68,3 +73,17 @@ class TimerRound(Base):
 
     team: Mapped[Team] = relationship(back_populates="timer_rounds")
     game: Mapped[Game] = relationship(back_populates="timer_rounds")
+
+
+class ClueAward(Base):
+    __tablename__ = "clue_awards"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    team_id: Mapped[int] = mapped_column(ForeignKey("teams.id", ondelete="CASCADE"), index=True)
+    game_id: Mapped[int] = mapped_column(ForeignKey("games.id", ondelete="CASCADE"), index=True)
+    clue_order: Mapped[int] = mapped_column(Integer, nullable=False)
+    clue_text: Mapped[str] = mapped_column(String(500), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+    team: Mapped[Team] = relationship(back_populates="clue_awards")
+    game: Mapped[Game] = relationship(back_populates="clue_awards")
