@@ -97,6 +97,7 @@ function PlayerLeaderboard({ viewerToken, clearViewerToken }) {
   const navigate = useNavigate();
   const [games, setGames] = useState([]);
   const [activeViewTab, setActiveViewTab] = useState("leaderboard");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [myClues, setMyClues] = useState([]);
   const [currentTeamId, setCurrentTeamId] = useState(null);
   const [activeGameId, setActiveGameId] = useState(TOTAL_TAB_ID);
@@ -171,6 +172,11 @@ function PlayerLeaderboard({ viewerToken, clearViewerToken }) {
   const handleLogout = () => {
     clearViewerToken();
     navigate("/login", { replace: true });
+  };
+
+  const selectViewTab = (tabName) => {
+    setActiveViewTab(tabName);
+    setIsSidebarOpen(false);
   };
 
   useEffect(() => {
@@ -285,6 +291,17 @@ function PlayerLeaderboard({ viewerToken, clearViewerToken }) {
 
   return (
     <section className="panel">
+      <button
+        type="button"
+        className={isSidebarOpen ? "hamburger-toggle open" : "hamburger-toggle"}
+        aria-label="Open menu"
+        onClick={() => setIsSidebarOpen((previous) => !previous)}
+      >
+        <span />
+        <span />
+        <span />
+      </button>
+
       <header className="panel-header">
         <h2>Leaderboard</h2>
         <div className="panel-actions">
@@ -295,71 +312,82 @@ function PlayerLeaderboard({ viewerToken, clearViewerToken }) {
       <p className="muted">Last updated: {formatDateTime(lastUpdated)}</p>
       {error ? <p className="error-text">{error}</p> : null}
 
-      <div className="view-tabs">
-        <button
-          type="button"
-          className={activeViewTab === "leaderboard" ? "game-tab active" : "game-tab"}
-          onClick={() => setActiveViewTab("leaderboard")}
-        >
-          Leaderboard
-        </button>
-        <button
-          type="button"
-          className={activeViewTab === "clues" ? "game-tab active" : "game-tab"}
-          onClick={() => setActiveViewTab("clues")}
-        >
-          Clues
-        </button>
-      </div>
+      <div className="player-layout">
+        <aside className={isSidebarOpen ? "player-sidebar open" : "player-sidebar"}>
+          <button
+            type="button"
+            className={activeViewTab === "leaderboard" ? "sidebar-tab active" : "sidebar-tab"}
+            onClick={() => selectViewTab("leaderboard")}
+          >
+            Leaderboard
+          </button>
+          <button
+            type="button"
+            className={activeViewTab === "clues" ? "sidebar-tab active" : "sidebar-tab"}
+            onClick={() => selectViewTab("clues")}
+          >
+            Clues
+          </button>
+        </aside>
 
-      {activeViewTab === "clues" ? (
-        <section className="clues-section">
-          {currentTeamId === null ? (
-            <p className="muted">Clues are available when logged in with a team account.</p>
-          ) : myClues.length === 0 ? (
-            <p className="muted">No clues earned yet. Submit stars from admin to unlock clues.</p>
-          ) : (
-            <div className="clues-list">
-              {myClues.map((group) => (
-                <article key={group.game_id} className="clue-card">
-                  <h4>{group.game_name}</h4>
-                  <ul>
-                    {group.clues.map((clue) => (
-                      <li key={clue.id}>
-                        <strong>Clue {clue.clue_order}:</strong> {clue.clue_text}
-                      </li>
-                    ))}
-                  </ul>
-                </article>
+        {isSidebarOpen ? (
+          <button
+            type="button"
+            className="sidebar-backdrop"
+            aria-label="Close side menu"
+            onClick={() => setIsSidebarOpen(false)}
+          />
+        ) : null}
+
+        <div className="player-content">
+          {activeViewTab === "clues" ? (
+            <section className="clues-section">
+              {currentTeamId === null ? (
+                <p className="muted">Clues are available when logged in with a team account.</p>
+              ) : myClues.length === 0 ? (
+                <p className="muted">No clues earned yet. Submit stars from admin to unlock clues.</p>
+              ) : (
+                <div className="clues-list">
+                  {myClues.map((group) => (
+                    <article key={group.game_id} className="clue-card">
+                      <h4>{group.game_name}</h4>
+                      <ul>
+                        {group.clues.map((clue) => (
+                          <li key={clue.id}>
+                            <strong>Clue {clue.clue_order}:</strong> {clue.clue_text}
+                          </li>
+                        ))}
+                      </ul>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </section>
+          ) : null}
+
+          {activeViewTab === "leaderboard" && games.length > 0 && (
+            <div className="game-tabs">
+              <button
+                type="button"
+                className={activeGameId === TOTAL_TAB_ID ? "game-tab active" : "game-tab"}
+                onClick={() => setActiveGameId(TOTAL_TAB_ID)}
+              >
+                Total
+              </button>
+              {games.map((game) => (
+                <button
+                  key={game.game_id}
+                  type="button"
+                  className={game.game_id === activeGameId ? "game-tab active" : "game-tab"}
+                  onClick={() => setActiveGameId(game.game_id)}
+                >
+                  {game.game_name}
+                </button>
               ))}
             </div>
           )}
-        </section>
-      ) : null}
 
-      {activeViewTab === "leaderboard" && games.length > 0 && (
-        <div className="game-tabs">
-          <button
-            type="button"
-            className={activeGameId === TOTAL_TAB_ID ? "game-tab active" : "game-tab"}
-            onClick={() => setActiveGameId(TOTAL_TAB_ID)}
-          >
-            Total
-          </button>
-          {games.map((game) => (
-            <button
-              key={game.game_id}
-              type="button"
-              className={game.game_id === activeGameId ? "game-tab active" : "game-tab"}
-              onClick={() => setActiveGameId(game.game_id)}
-            >
-              {game.game_name}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {activeViewTab === "leaderboard" ? (
+          {activeViewTab === "leaderboard" ? (
       <table className="leaderboard-table">
         <thead>
           <tr>
@@ -443,6 +471,8 @@ function PlayerLeaderboard({ viewerToken, clearViewerToken }) {
         </tbody>
       </table>
       ) : null}
+        </div>
+      </div>
     </section>
   );
 }

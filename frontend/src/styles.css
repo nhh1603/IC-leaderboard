@@ -84,11 +84,42 @@ body {
   align-items: start;
 }
 
+.player-layout {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
 .admin-sidebar {
   display: grid;
   gap: 8px;
   position: sticky;
   top: 12px;
+}
+
+.player-sidebar {
+  display: grid;
+  grid-auto-rows: min-content;
+  align-content: start;
+  justify-items: start;
+  gap: 8px;
+  position: sticky;
+  top: 12px;
+}
+
+.player-sidebar .sidebar-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  justify-self: start;
+  width: 148px;
+  height: 38px;
+  padding: 0 12px;
+}
+
+.player-content {
+  min-width: 0;
 }
 
 .sidebar-tab {
@@ -316,6 +347,18 @@ body {
   gap: 8px;
 }
 
+.hamburger-toggle {
+  display: none;
+}
+
+.hamburger-toggle span {
+  display: block;
+  width: 18px;
+  height: 2px;
+  background: #fff;
+  border-radius: 2px;
+}
+
 .status-pill {
   font-size: 12px;
   border-radius: 999px;
@@ -436,6 +479,10 @@ button:disabled:hover {
   margin: 12px 0;
 }
 
+.sidebar-backdrop {
+  display: none;
+}
+
 .clues-section {
   margin-top: 8px;
 }
@@ -516,6 +563,82 @@ button:disabled:hover {
 
 .team-row:hover td {
   background: var(--accent-soft);
+}
+
+@media (max-width: 860px) {
+  .hamburger-toggle {
+    display: inline-flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border-radius: 10px;
+    z-index: 50;
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .hamburger-toggle.open {
+    background: var(--surface-soft);
+    border-color: var(--border-strong);
+    box-shadow: none;
+  }
+
+  .hamburger-toggle.open span {
+    background: var(--accent-strong);
+  }
+
+  .player-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .player-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 260px;
+    padding: 64px 12px 18px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    box-shadow: 0 10px 35px rgba(18, 15, 20, 0.2);
+    transform: translateX(-106%);
+    transition: transform 180ms ease;
+    z-index: 40;
+  }
+
+  .player-sidebar .sidebar-tab {
+    width: 136px;
+    height: 38px;
+    padding: 0 12px;
+  }
+
+  .player-sidebar.open {
+    transform: translateX(0);
+  }
+
+  .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    margin: 0;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: rgba(33, 16, 22, 0.34);
+    z-index: 30;
+  }
+
+  .sidebar-backdrop:hover {
+    background: rgba(33, 16, 22, 0.34);
+    border: none;
+  }
 }
 
 .team-toggle {
