@@ -1,6 +1,6 @@
 import React from "react";
 import { useEffect, useState } from "react";
-import { Navigate, NavLink, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 
 import { getCurrentUser } from "./api";
 import StoryIntro from "./components/StoryIntro";
@@ -44,13 +44,20 @@ function RequireAdmin({ token, setAdminToken, children }) {
   }, [token, setAdminToken]);
 
   if (accessState === "checking") return null;
-  if (accessState === "denied") return <Navigate to="/admin/login" replace />;
+  if (accessState === "denied") return <Navigate to="/login" replace />;
   return children;
 }
 
-function RequireViewer({ token, children }) {
-  if (!token) return <Navigate to="/login" replace />;
-  return children;
+function RequireViewer({ token, adminToken, children }) {
+  if (token) return children;
+  if (adminToken) return <Navigate to="/admin" replace />;
+  return <Navigate to="/login" replace />;
+}
+
+function RootRedirect({ viewerToken, adminToken }) {
+  if (viewerToken) return <Navigate to="/" replace />;
+  if (adminToken) return <Navigate to="/admin" replace />;
+  return <Navigate to="/login" replace />;
 }
 
 export default function App() {
@@ -90,28 +97,20 @@ export default function App() {
     <main className="app-shell">
       {showIntro ? <StoryIntro onFinish={finishIntro} /> : null}
 
-      <header className="app-header">
-        <nav className="tabs">
-          <NavLink to="/" className={({ isActive }) => (isActive ? "tab active" : "tab")} end>
-            Player View
-          </NavLink>
-          <NavLink to="/admin" className={({ isActive }) => (isActive ? "tab active" : "tab")}>
-            Admin View
-          </NavLink>
-        </nav>
-      </header>
-
       <Routes>
-        <Route path="/login" element={<PlayerPage viewerToken={viewerToken} setViewerToken={setViewerToken} loginOnly />} />
+        <Route
+          path="/login"
+          element={<PlayerPage viewerToken={viewerToken} setViewerToken={setViewerToken} setAdminToken={setAdminToken} loginOnly />}
+        />
         <Route
           path="/"
           element={
-            <RequireViewer token={viewerToken}>
+            <RequireViewer token={viewerToken} adminToken={adminToken}>
               <PlayerPage viewerToken={viewerToken} setViewerToken={setViewerToken} />
             </RequireViewer>
           }
         />
-        <Route path="/admin/login" element={<AdminPage adminToken={adminToken} setAdminToken={setAdminToken} loginOnly />} />
+        <Route path="/admin/login" element={<Navigate to="/login" replace />} />
         <Route
           path="/admin"
           element={
@@ -120,7 +119,7 @@ export default function App() {
             </RequireAdmin>
           }
         />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<RootRedirect viewerToken={viewerToken} adminToken={adminToken} />} />
       </Routes>
     </main>
   );

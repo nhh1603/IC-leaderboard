@@ -51,7 +51,7 @@ function renderStars(score) {
   );
 }
 
-function PlayerLoginPage({ setViewerToken }) {
+function PlayerLoginPage({ setViewerToken, setAdminToken }) {
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -65,8 +65,16 @@ function PlayerLoginPage({ setViewerToken }) {
 
     try {
       const payload = await login(username, password);
-      setViewerToken(payload.access_token);
-      navigate("/", { replace: true });
+      const me = await getCurrentUser(payload.access_token);
+      if (me.account_type === "admin") {
+        setAdminToken(payload.access_token);
+        setViewerToken("");
+        navigate("/admin", { replace: true });
+      } else {
+        setViewerToken(payload.access_token);
+        setAdminToken("");
+        navigate("/", { replace: true });
+      }
     } catch (err) {
       setErrorText(err.message);
     } finally {
@@ -75,16 +83,16 @@ function PlayerLoginPage({ setViewerToken }) {
   };
 
   return (
-    <section className="panel player-panel">
-      <h2>Viewer Login</h2>
-      <p className="muted">Use either the admin account or a team account.</p>
+    <section className="panel auth-panel">
+      <h2>Welcome to The Iron Laurel!</h2>
+      <p>Before entering, can you please tell us who you are?</p>
       <form className="form-grid" onSubmit={handleSubmit}>
         <label>
           Username
           <input
             value={username}
             onChange={(event) => setUsername(event.target.value)}
-            placeholder="admin or team username"
+            placeholder="Username"
             required
           />
         </label>
@@ -122,10 +130,12 @@ function PlayerLeaderboard({ viewerToken, clearViewerToken }) {
   const [myPerpetratorHistory, setMyPerpetratorHistory] = useState({ submissions: [], final_choice: null });
   const [selectedPerpetratorName, setSelectedPerpetratorName] = useState("");
   const [isSubmittingPerpetrator, setIsSubmittingPerpetrator] = useState(false);
+  const [viewerIdentity, setViewerIdentity] = useState({ username: "", account_type: "" });
 
   const loadViewerTeam = async () => {
     try {
       const viewer = await getCurrentUser(viewerToken);
+      setViewerIdentity({ username: viewer.username || "", account_type: viewer.account_type || "" });
       if (viewer.account_type !== "team") {
         setCurrentTeamId(null);
         return;
@@ -232,6 +242,7 @@ function PlayerLeaderboard({ viewerToken, clearViewerToken }) {
   };
 
   const handleLogout = () => {
+    setIsSidebarOpen(false);
     clearViewerToken();
     navigate("/login", { replace: true });
   };
@@ -384,9 +395,9 @@ function PlayerLeaderboard({ viewerToken, clearViewerToken }) {
         <h2>Leaderboard</h2>
         <div className="panel-actions">
           <div className={`status-pill ${connectionState}`}>{stateLabel}</div>
-          <button type="button" className="compact outline" onClick={handleLogout}>Logout</button>
         </div>
       </header>
+      <p className="muted">Logged in as: {viewerIdentity.username || "-"} ({viewerIdentity.account_type || "unknown"})</p>
       <p className="muted">Last updated: {formatDateTime(lastUpdated)}</p>
       {error ? <p className="error-text">{error}</p> : null}
 
@@ -419,6 +430,9 @@ function PlayerLeaderboard({ viewerToken, clearViewerToken }) {
             onClick={() => selectViewTab("perpetrator")}
           >
             Perpetrator
+          </button>
+          <button type="button" className="sidebar-tab logout" onClick={handleLogout}>
+            Sign out
           </button>
         </aside>
 
@@ -662,9 +676,9 @@ function PlayerLeaderboard({ viewerToken, clearViewerToken }) {
   );
 }
 
-export default function PlayerPage({ viewerToken, setViewerToken, loginOnly = false }) {
+export default function PlayerPage({ viewerToken, setViewerToken, setAdminToken = () => {}, loginOnly = false }) {
   if (loginOnly) {
-    return <PlayerLoginPage setViewerToken={setViewerToken} />;
+    return <PlayerLoginPage setViewerToken={setViewerToken} setAdminToken={setAdminToken} />;
   }
 
   return <PlayerLeaderboard viewerToken={viewerToken} clearViewerToken={() => setViewerToken("")} />;
