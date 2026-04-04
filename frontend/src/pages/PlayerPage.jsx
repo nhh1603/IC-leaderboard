@@ -75,7 +75,7 @@ function PlayerLoginPage({ setViewerToken }) {
   };
 
   return (
-    <section className="panel">
+    <section className="panel player-panel">
       <h2>Viewer Login</h2>
       <p className="muted">Use either the admin account or a team account.</p>
       <form className="form-grid" onSubmit={handleSubmit}>
@@ -368,7 +368,7 @@ function PlayerLeaderboard({ viewerToken, clearViewerToken }) {
   const entries = activeGameId === TOTAL_TAB_ID ? totalEntries : (activeGame?.entries ?? []);
 
   return (
-    <section className="panel">
+    <section className="panel player-panel">
       <button
         type="button"
         className={isSidebarOpen ? "hamburger-toggle open" : "hamburger-toggle"}

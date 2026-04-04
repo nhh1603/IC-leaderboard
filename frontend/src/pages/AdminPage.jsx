@@ -53,6 +53,7 @@ export default function AdminPage({ adminToken, setAdminToken, loginOnly = false
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("team");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const [teams, setTeams] = useState([]);
   const [allPlayers, setAllPlayers] = useState([]);
@@ -196,7 +197,13 @@ export default function AdminPage({ adminToken, setAdminToken, loginOnly = false
   const handleLogout = () => {
     setAdminToken("");
     setStatusText("Signed out");
+    setIsSidebarOpen(false);
     navigate("/admin/login", { replace: true });
+  };
+
+  const selectAdminTab = (tabName) => {
+    setActiveTab(tabName);
+    setIsSidebarOpen(false);
   };
 
   const handleCreateTeam = async (event) => {
@@ -489,7 +496,20 @@ export default function AdminPage({ adminToken, setAdminToken, loginOnly = false
   );
 
   return (
-    <section className="panel">
+    <section className="panel admin-panel">
+      {!loginOnly ? (
+        <button
+          type="button"
+          className={isSidebarOpen ? "hamburger-toggle open" : "hamburger-toggle"}
+          aria-label="Open admin menu"
+          onClick={() => setIsSidebarOpen((previous) => !previous)}
+        >
+          <span />
+          <span />
+          <span />
+        </button>
+      ) : null}
+
       <h2>Admin View</h2>
       <p className="muted">Manage games, teams, players, and scores.</p>
 
@@ -512,32 +532,32 @@ export default function AdminPage({ adminToken, setAdminToken, loginOnly = false
         </form>
       ) : (
         <div className="admin-layout">
-          <aside className="admin-sidebar">
+          <aside className={isSidebarOpen ? "admin-sidebar open" : "admin-sidebar"}>
             <button
               type="button"
               className={activeTab === "team" ? "sidebar-tab active" : "sidebar-tab"}
-              onClick={() => setActiveTab("team")}
+              onClick={() => selectAdminTab("team")}
             >
               Team
             </button>
             <button
               type="button"
               className={activeTab === "score" ? "sidebar-tab active" : "sidebar-tab"}
-              onClick={() => setActiveTab("score")}
+              onClick={() => selectAdminTab("score")}
             >
               Score
             </button>
             <button
               type="button"
               className={activeTab === "game" ? "sidebar-tab active" : "sidebar-tab"}
-              onClick={() => setActiveTab("game")}
+              onClick={() => selectAdminTab("game")}
             >
               Game
             </button>
             <button
               type="button"
               className={activeTab === "perpetrator" ? "sidebar-tab active" : "sidebar-tab"}
-              onClick={() => setActiveTab("perpetrator")}
+              onClick={() => selectAdminTab("perpetrator")}
             >
               Perpetrator
             </button>
@@ -545,6 +565,15 @@ export default function AdminPage({ adminToken, setAdminToken, loginOnly = false
               Sign out
             </button>
           </aside>
+
+          {isSidebarOpen ? (
+            <button
+              type="button"
+              className="sidebar-backdrop"
+              aria-label="Close admin menu"
+              onClick={() => setIsSidebarOpen(false)}
+            />
+          ) : null}
 
           <div className="admin-content">
             {activeTab === "team" && (
