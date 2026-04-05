@@ -121,6 +121,8 @@ export default function App() {
         />
         <Route path="*" element={<RootRedirect viewerToken={viewerToken} adminToken={adminToken} />} />
       </Routes>
+
+      <p className="app-credit">Developed by Hoang Nghia Hieu</p>
     </main>
   );
 }
