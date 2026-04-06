@@ -893,6 +893,21 @@ body {
   padding: 12px;
 }
 
+.score-section-block {
+  border: 2px solid rgba(193, 18, 31, 0.15);
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(255, 248, 249, 0.6), rgba(255, 240, 243, 0.4));
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06), inset 0 0 12px rgba(193, 18, 31, 0.04);
+  padding: 14px;
+  margin-bottom: 14px;
+}
+
+.score-section-block h4 {
+  margin: 0 0 12px;
+  color: var(--accent-strong);
+  font-size: 15px;
+}
+
 .timer-display {
   margin: 0 0 10px;
   font-size: 26px;

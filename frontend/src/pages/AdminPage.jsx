@@ -3,8 +3,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import {
-  createGame,
-  deleteGame,
   deleteTimerRound,
   endGameSession,
   fetchAllPerpetratorSubmissions,
@@ -14,13 +12,13 @@ import {
   fetchPlayers,
   fetchTimerRounds,
   fetchTeams,
+  getTeamStartedSessions,
   getCurrentUser,
   login,
   registerTimerRound,
   startGameSession,
   submitScore,
   updatePerpetratorPortal,
-  updateGame,
 } from "../api";
 
 function formatDuration(milliseconds) {
@@ -42,7 +40,7 @@ export default function AdminPage({ adminToken, setAdminToken, loginOnly = false
   const [username, setUsername] = useState("admin");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("team");
+  const [activeTab, setActiveTab] = useState("score");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const [teams, setTeams] = useState([]);
@@ -50,12 +48,11 @@ export default function AdminPage({ adminToken, setAdminToken, loginOnly = false
   const [selectedTeamId, setSelectedTeamId] = useState("");
 
   const [games, setGames] = useState([]);
-  const [newGameName, setNewGameName] = useState("");
-  const [editingGame, setEditingGame] = useState(null);
+  const [completedTeamsByGameId, setCompletedTeamsByGameId] = useState({});
+  const [completionRefreshTick, setCompletionRefreshTick] = useState(0);
 
   const [selectedGameId, setSelectedGameId] = useState("");
   const [delta, setDelta] = useState(0);
-  const [reason, setReason] = useState("Manual update");
 
   const [timerRunning, setTimerRunning] = useState(false);
   const [timerStartAt, setTimerStartAt] = useState(null);
@@ -238,51 +235,69 @@ export default function AdminPage({ adminToken, setAdminToken, loginOnly = false
     });
   };
 
-  const handleCreateGame = async (event) => {
-    event.preventDefault();
-    if (!adminToken) return;
-    setErrorText("");
-    setStatusText("");
-    try {
-      const payload = await createGame(adminToken, newGameName);
-      setNewGameName("");
-      setStatusText(`Created game: ${payload.name}`);
-      await loadGames();
-      setSelectedGameId(String(payload.id));
-    } catch (err) {
-      setErrorText(err.message);
-    }
+  const refreshCompletionMatrix = () => {
+    setCompletionRefreshTick((previous) => previous + 1);
   };
 
-  const handleUpdateGame = async (event) => {
-    event.preventDefault();
-    if (!adminToken || !editingGame) return;
-    setErrorText("");
-    setStatusText("");
-    try {
-      const payload = await updateGame(adminToken, editingGame.id, editingGame.name);
-      setEditingGame(null);
-      setStatusText(`Updated game: ${payload.name}`);
-      await loadGames();
-    } catch (err) {
-      setErrorText(err.message);
+  useEffect(() => {
+    if (!adminToken || teams.length === 0 || games.length === 0) {
+      setCompletedTeamsByGameId({});
+      return;
     }
-  };
 
-  const handleDeleteGame = async (gameId, gameName) => {
-    if (!adminToken) return;
-    if (!window.confirm(`Delete game "${gameName}"? All its scores will be removed.`)) return;
-    setErrorText("");
-    setStatusText("");
-    try {
-      await deleteGame(adminToken, gameId);
-      setStatusText(`Deleted game: ${gameName}`);
-      if (selectedGameId === String(gameId)) setSelectedGameId("");
-      await loadGames();
-    } catch (err) {
-      setErrorText(err.message);
-    }
-  };
+    let cancelled = false;
+
+    const loadCompletionMatrix = async () => {
+      try {
+        const allSessionRows = await Promise.all(
+          teams.map(async (team) => {
+            try {
+              const sessions = await getTeamStartedSessions(adminToken, team.id);
+              return { teamName: team.name, sessions };
+            } catch {
+              return { teamName: team.name, sessions: [] };
+            }
+          })
+        );
+
+        const next = {};
+        for (const game of games) next[game.id] = [];
+
+        for (const row of allSessionRows) {
+          const completedGameIds = new Set(
+            (row.sessions || [])
+              .filter((session) => !session.is_active && session.ended_at)
+              .map((session) => session.game_id)
+          );
+          for (const gameId of completedGameIds) {
+            if (!next[gameId]) next[gameId] = [];
+            next[gameId].push(row.teamName);
+          }
+        }
+
+        for (const gameId of Object.keys(next)) {
+          next[gameId].sort((a, b) => a.localeCompare(b));
+        }
+
+        if (!cancelled) setCompletedTeamsByGameId(next);
+      } catch (err) {
+        if (!cancelled) setErrorText(err.message || "Unable to load game completion matrix");
+      }
+    };
+
+    loadCompletionMatrix();
+    return () => {
+      cancelled = true;
+    };
+  }, [adminToken, teams, games, completionRefreshTick]);
+
+  useEffect(() => {
+    if (!adminToken) return undefined;
+    const intervalId = window.setInterval(() => {
+      refreshCompletionMatrix();
+    }, 5000);
+    return () => window.clearInterval(intervalId);
+  }, [adminToken]);
 
   const handleSubmitScore = async (event) => {
     event.preventDefault();
@@ -290,11 +305,12 @@ export default function AdminPage({ adminToken, setAdminToken, loginOnly = false
     setErrorText("");
     setStatusText("");
     try {
-      await submitScore(adminToken, selectedTeamId, selectedGameId, delta, reason);
+      await submitScore(adminToken, selectedTeamId, selectedGameId, delta, "Manual update");
       setStatusText("Score submitted");
       // Game session will be ended automatically by the backend
       setActiveGameSession(null);
       loadLeaderboard();
+      refreshCompletionMatrix();
     } catch (err) {
       setErrorText(err.message);
     }
@@ -308,6 +324,7 @@ export default function AdminPage({ adminToken, setAdminToken, loginOnly = false
       const session = await startGameSession(adminToken, selectedTeamId, selectedGameId);
       setActiveGameSession(session);
       setStatusText("Game started! Story should appear for the team.");
+      refreshCompletionMatrix();
     } catch (err) {
       setErrorText(err.message);
     }
@@ -321,6 +338,7 @@ export default function AdminPage({ adminToken, setAdminToken, loginOnly = false
       await endGameSession(adminToken, activeGameSession.id);
       setActiveGameSession(null);
       setStatusText("Game ended");
+      refreshCompletionMatrix();
     } catch (err) {
       setErrorText(err.message);
     }
@@ -509,17 +527,24 @@ export default function AdminPage({ adminToken, setAdminToken, loginOnly = false
           <aside className={isSidebarOpen ? "admin-sidebar open" : "admin-sidebar"}>
             <button
               type="button"
-              className={activeTab === "team" ? "sidebar-tab active" : "sidebar-tab"}
-              onClick={() => selectAdminTab("team")}
-            >
-              Team
-            </button>
-            <button
-              type="button"
               className={activeTab === "score" ? "sidebar-tab active" : "sidebar-tab"}
               onClick={() => selectAdminTab("score")}
             >
               Score
+            </button>
+            <button
+              type="button"
+              className={activeTab === "leaderboard" ? "sidebar-tab active" : "sidebar-tab"}
+              onClick={() => selectAdminTab("leaderboard")}
+            >
+              Leaderboard
+            </button>
+            <button
+              type="button"
+              className={activeTab === "team" ? "sidebar-tab active" : "sidebar-tab"}
+              onClick={() => selectAdminTab("team")}
+            >
+              Team
             </button>
             <button
               type="button"
@@ -534,13 +559,6 @@ export default function AdminPage({ adminToken, setAdminToken, loginOnly = false
               onClick={() => selectAdminTab("perpetrator")}
             >
               Perpetrator
-            </button>
-            <button
-              type="button"
-              className={activeTab === "leaderboard" ? "sidebar-tab active" : "sidebar-tab"}
-              onClick={() => selectAdminTab("leaderboard")}
-            >
-              Leaderboard
             </button>
             <button type="button" className="sidebar-tab logout" onClick={handleLogout}>
               Sign out
@@ -598,151 +616,128 @@ export default function AdminPage({ adminToken, setAdminToken, loginOnly = false
             {activeTab === "score" && (
               <>
                 <h3>Submit score</h3>
-                
-                <div className="form-grid" style={{ marginBottom: "16px" }}>
-                  <label>
-                    Team
-                    <select value={selectedTeamId} onChange={(e) => setSelectedTeamId(e.target.value)} required>
-                      <option value="">- select team -</option>
-                      {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-                    </select>
-                  </label>
-                  <label>
-                    Game
-                    <select value={selectedGameId} onChange={(e) => setSelectedGameId(e.target.value)} required>
-                      <option value="">- select game -</option>
-                      {games.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
-                    </select>
-                  </label>
-                  <button
-                    type="button"
-                    onClick={handleStartGame}
-                    disabled={!selectedGameId || !selectedTeamId || Boolean(activeGameSession)}
-                    className={activeGameSession ? "compact" : ""}
-                  >
-                    {activeGameSession ? "✓ Game started" : "Start game"}
-                  </button>
-                </div>
 
-                {activeGameSession && (
-                  <p className="success-text" style={{ marginBottom: "12px" }}>
-                    Active: {teams.find(t => t.id === parseInt(selectedTeamId))?.name} - {games.find(g => g.id === parseInt(selectedGameId))?.name}
-                  </p>
-                )}
-
-                <h3>Round timer</h3>
-                <div className="timer-panel">
-                  <p className="timer-display">{formatDuration(timerDisplay)}</p>
-                  <div className="timer-actions">
-                    <button type="button" onClick={startTimer} disabled={timerRunning || stoppedElapsed > 0 || !canSubmitForSelection}>Start</button>
-                    <button type="button" onClick={resumeTimer} disabled={timerRunning || stoppedElapsed <= 0 || !canSubmitForSelection}>Resume</button>
-                    <button type="button" onClick={stopTimer} disabled={!timerRunning || !canSubmitForSelection}>Stop</button>
-                    <button type="button" className="compact neutral" onClick={resetTimer} disabled={(timerRunning && liveElapsed === 0) || !canSubmitForSelection}>Reset</button>
+                <section className="score-section-block">
+                  <h4>1. Select Team & Game</h4>
+                  <div className="form-grid" style={{ marginBottom: "16px" }}>
+                    <label>
+                      Team
+                      <select value={selectedTeamId} onChange={(e) => setSelectedTeamId(e.target.value)} required>
+                        <option value="">- select team -</option>
+                        {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                      </select>
+                    </label>
+                    <label>
+                      Game
+                      <select value={selectedGameId} onChange={(e) => setSelectedGameId(e.target.value)} required>
+                        <option value="">- select game -</option>
+                        {games.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+                      </select>
+                    </label>
                     <button
                       type="button"
-                      onClick={registerCurrentRound}
-                      disabled={!selectedTeamId || !selectedGameId || timerDisplay <= 0 || timerRunning || !canSubmitForSelection}
+                      onClick={handleStartGame}
+                      disabled={!selectedGameId || !selectedTeamId || Boolean(activeGameSession)}
+                      className={activeGameSession ? "compact" : ""}
                     >
-                      Register round
+                      {activeGameSession ? "✓ Game started" : "Start game"}
                     </button>
                   </div>
-                  <p className="muted">You can register as many rounds as needed for the selected team/game.</p>
 
-                  {timerRoundsForSelection.length > 0 && (
-                    <ul className="timer-round-list">
-                      {timerRoundsForSelection.map((round) => (
-                        <li key={round.id ?? `${round.round_number}-${round.duration_milliseconds}`}>
-                          <span>Round {round.round_number}: {formatDuration(round.duration_milliseconds)}</span>
-                          <button type="button" className="compact danger" onClick={() => handleDeleteTimerRound(round)}>
-                            Delete
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
+                  {activeGameSession && (
+                    <p className="success-text" style={{ marginBottom: "12px" }}>
+                      Active: {teams.find(t => t.id === parseInt(selectedTeamId))?.name} - {games.find(g => g.id === parseInt(selectedGameId))?.name}
+                    </p>
                   )}
-                </div>
+                </section>
 
-                <form className="form-grid" onSubmit={handleSubmitScore}>
-                  <label>
-                    Stars won
-                    <div className="admin-star-picker" role="radiogroup" aria-label="Stars won">
-                      {[1, 2, 3].map((starValue) => (
-                        <button
-                          key={starValue}
-                          type="button"
-                          className={Number(delta) >= starValue ? "admin-star-btn active" : "admin-star-btn"}
-                          onClick={() => handleSelectStars(starValue)}
-                          aria-label={`${starValue} star${starValue > 1 ? "s" : ""}`}
-                        >
-                          ★
-                        </button>
-                      ))}
+                <section className="score-section-block">
+                  <h4>2. Submit Score</h4>
+                  <h4>Round timer</h4>
+                  <div className="timer-panel">
+                    <p className="timer-display">{formatDuration(timerDisplay)}</p>
+                    <div className="timer-actions">
+                      <button type="button" onClick={startTimer} disabled={timerRunning || stoppedElapsed > 0 || !canSubmitForSelection}>Start</button>
+                      <button type="button" onClick={resumeTimer} disabled={timerRunning || stoppedElapsed <= 0 || !canSubmitForSelection}>Resume</button>
+                      <button type="button" onClick={stopTimer} disabled={!timerRunning || !canSubmitForSelection}>Stop</button>
+                      <button type="button" className="compact neutral" onClick={resetTimer} disabled={(timerRunning && liveElapsed === 0) || !canSubmitForSelection}>Reset</button>
                       <button
                         type="button"
-                        className="compact outline"
-                        onClick={() => setDelta(0)}
+                        onClick={registerCurrentRound}
+                        disabled={!selectedTeamId || !selectedGameId || timerDisplay <= 0 || timerRunning || !canSubmitForSelection}
                       >
-                        Clear
+                        Register round
                       </button>
                     </div>
-                    <span className="muted">Selected: {Number(delta)} / 3</span>
-                  </label>
-                  <label>
-                    Reason
-                    <input value={reason} onChange={(e) => setReason(e.target.value)} maxLength={200} />
-                  </label>
-                  <button type="submit" disabled={!selectedGameId || !selectedTeamId || !canSubmitForSelection}>Submit score</button>
-                </form>
+                    <p className="muted">You can register as many rounds as needed for the selected team/game.</p>
+
+                    {timerRoundsForSelection.length > 0 && (
+                      <ul className="timer-round-list">
+                        {timerRoundsForSelection.map((round) => (
+                          <li key={round.id ?? `${round.round_number}-${round.duration_milliseconds}`}>
+                            <span>Round {round.round_number}: {formatDuration(round.duration_milliseconds)}</span>
+                            <button type="button" className="compact danger" onClick={() => handleDeleteTimerRound(round)}>
+                              Delete
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+
+                  <form className="form-grid" onSubmit={handleSubmitScore}>
+                    <label>
+                      Stars won
+                      <div className="admin-star-picker" role="radiogroup" aria-label="Stars won">
+                        {[1, 2, 3].map((starValue) => (
+                          <button
+                            key={starValue}
+                            type="button"
+                            className={Number(delta) >= starValue ? "admin-star-btn active" : "admin-star-btn"}
+                            onClick={() => handleSelectStars(starValue)}
+                            aria-label={`${starValue} star${starValue > 1 ? "s" : ""}`}
+                          >
+                            ★
+                          </button>
+                        ))}
+                        <button
+                          type="button"
+                          className="compact outline"
+                          onClick={() => setDelta(0)}
+                        >
+                          Clear
+                        </button>
+                      </div>
+                      <span className="muted">Selected: {Number(delta)} / 3</span>
+                    </label>
+                    <button type="submit" disabled={!selectedGameId || !selectedTeamId || !canSubmitForSelection}>Submit score</button>
+                  </form>
+                </section>
               </>
             )}
 
             {activeTab === "game" && (
               <>
-                <h3>Games</h3>
+                <h3>Available games</h3>
+                <p className="muted">Games are managed from config files. This view is read-only.</p>
                 <table className="leaderboard-table table-actions">
                   <thead>
-                    <tr><th>Name</th><th>Key</th><th>Actions</th></tr>
+                    <tr><th>Name</th><th>Key</th><th>Completed by teams</th></tr>
                   </thead>
                   <tbody>
                     {games.length === 0 ? (
                       <tr><td colSpan={3} className="empty-cell">No games yet</td></tr>
                     ) : games.map((g) => (
                       <tr key={g.id}>
-                        <td>
-                          {editingGame?.id === g.id ? (
-                            <form className="inline-edit" onSubmit={handleUpdateGame}>
-                              <input
-                                value={editingGame.name}
-                                onChange={(e) => setEditingGame({ ...editingGame, name: e.target.value })}
-                                required
-                              />
-                              <button type="submit" className="compact">Save</button>
-                              <button type="button" onClick={() => setEditingGame(null)} className="compact neutral">Cancel</button>
-                            </form>
-                          ) : g.name}
-                        </td>
+                        <td>{g.name}</td>
                         <td><span className="muted">{g.config_key ?? "-"}</span></td>
-                        <td className="action-buttons">
-                          <button type="button" className="compact outline" onClick={() => setEditingGame({ id: g.id, name: g.name })}>Edit</button>
-                          <button type="button" className="compact danger" onClick={() => handleDeleteGame(g.id, g.name)}>Delete</button>
+                        <td>
+                          {completedTeamsByGameId[g.id]?.length ? completedTeamsByGameId[g.id].join(", ") : <span className="muted">-</span>}
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-
-                <form className="form-grid" onSubmit={handleCreateGame}>
-                  <label>
-                    New game name
-                    <input
-                      value={newGameName}
-                      onChange={(e) => setNewGameName(e.target.value)}
-                      placeholder="Game name"
-                      required
-                    />
-                  </label>
-                  <button type="submit">Add game</button>
-                </form>
               </>
             )}
 
