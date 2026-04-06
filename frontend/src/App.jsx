@@ -64,6 +64,7 @@ export default function App() {
   const [adminToken, setAdminToken] = useState(() => window.localStorage.getItem("admin_token") || "");
   const [viewerToken, setViewerToken] = useState(() => window.localStorage.getItem("viewer_token") || "");
   const [showIntro, setShowIntro] = useState(false);
+  const [introReplayCount, setIntroReplayCount] = useState(0);
 
   useEffect(() => {
     const hasSeenIntro = window.localStorage.getItem(INTRO_SEEN_KEY) === "true";
@@ -75,6 +76,11 @@ export default function App() {
   const finishIntro = () => {
     window.localStorage.setItem(INTRO_SEEN_KEY, "true");
     setShowIntro(false);
+  };
+
+  const replayIntro = () => {
+    setIntroReplayCount((previous) => previous + 1);
+    setShowIntro(true);
   };
 
   useEffect(() => {
@@ -95,18 +101,18 @@ export default function App() {
 
   return (
     <main className="app-shell">
-      {showIntro ? <StoryIntro onFinish={finishIntro} /> : null}
+      {showIntro ? <StoryIntro key={introReplayCount} onFinish={finishIntro} /> : null}
 
       <Routes>
         <Route
           path="/login"
-          element={<PlayerPage viewerToken={viewerToken} setViewerToken={setViewerToken} setAdminToken={setAdminToken} loginOnly />}
+          element={<PlayerPage viewerToken={viewerToken} setViewerToken={setViewerToken} setAdminToken={setAdminToken} onReplayIntro={replayIntro} loginOnly />}
         />
         <Route
           path="/"
           element={
             <RequireViewer token={viewerToken} adminToken={adminToken}>
-              <PlayerPage viewerToken={viewerToken} setViewerToken={setViewerToken} />
+              <PlayerPage viewerToken={viewerToken} setViewerToken={setViewerToken} onReplayIntro={replayIntro} />
             </RequireViewer>
           }
         />
@@ -115,7 +121,7 @@ export default function App() {
           path="/admin"
           element={
             <RequireAdmin token={adminToken} setAdminToken={setAdminToken}>
-              <AdminPage adminToken={adminToken} setAdminToken={setAdminToken} />
+              <AdminPage adminToken={adminToken} setAdminToken={setAdminToken} onReplayIntro={replayIntro} />
             </RequireAdmin>
           }
         />

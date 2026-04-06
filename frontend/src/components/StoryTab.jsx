@@ -9,6 +9,7 @@ export default function StoryTab({
   activeGameOnly = false,
   activeSessionOverride = null,
   gameConfigOverride = null,
+  onReplayIntro,
 }) {
   const [selectedStoryNum, setSelectedStoryNum] = useState(4);
   const [selectedGameId, setSelectedGameId] = useState(null);
@@ -76,14 +77,15 @@ export default function StoryTab({
           const response = await fetch(`/story/${i}.txt`);
           if (response.ok) {
             const text = await response.text();
+            if (isHtmlFallbackDocument(text)) continue;
             const title = extractTitle(text);
             stories.push({ num: i, title });
           }
         }
         setStoryList(stories);
-        if (stories.length > 0) {
-          loadMainStory(4); // Default to episode 4
-        }
+
+        // Always attempt to load episode 4 first; UI shows a clear fallback if missing.
+        loadMainStory(4);
       } catch (err) {
         setError("Failed to load stories");
       }
@@ -266,6 +268,11 @@ export default function StoryTab({
     return (
       <section className="story-section">
         <div className="story-container">
+          <div className="story-top-actions">
+            <button type="button" className="compact outline" onClick={() => onReplayIntro?.()}>
+              Replay intro
+            </button>
+          </div>
           <div className="story-content-wrapper">
             {isLoading && <p className="muted">Loading...</p>}
             {error && <p className="error-text">{error}</p>}
@@ -291,6 +298,12 @@ export default function StoryTab({
   return (
     <section className="story-section">
       <div className="story-container">
+        <div className="story-top-actions">
+          <button type="button" className="compact outline" onClick={() => onReplayIntro?.()}>
+            Replay intro
+          </button>
+        </div>
+
         {/* Active game session banner */}
         {activeSession && (
           <div className="active-game-banner">
@@ -349,6 +362,10 @@ export default function StoryTab({
               )}
             </div>
           )}
+
+          {selectedGameId === null && !storyText && !isLoading && !error ? (
+            <p className="muted">No story content available yet.</p>
+          ) : null}
 
           {selectedGameId !== null && (
             <div className="story-content">

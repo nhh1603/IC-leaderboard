@@ -146,7 +146,7 @@ function PlayerLoginPage({ setViewerToken, setAdminToken }) {
   );
 }
 
-function PlayerLeaderboard({ viewerToken, clearViewerToken }) {
+function PlayerLeaderboard({ viewerToken, clearViewerToken, onReplayIntro }) {
   const navigate = useNavigate();
   const [games, setGames] = useState([]);
   const [activeViewTab, setActiveViewTab] = useState("leaderboard");
@@ -658,6 +658,7 @@ function PlayerLeaderboard({ viewerToken, clearViewerToken }) {
             activeGameOnly
             activeSessionOverride={activeSessionForLock}
             gameConfigOverride={gameConfigById}
+            onReplayIntro={onReplayIntro}
           />
         ) : null}
 
@@ -870,7 +871,7 @@ function PlayerLeaderboard({ viewerToken, clearViewerToken }) {
           ) : null}
 
           {activeViewTab === "story" ? (
-            <StoryTab games={games} currentTeamId={currentTeamId} viewerToken={viewerToken} />
+            <StoryTab games={games} currentTeamId={currentTeamId} viewerToken={viewerToken} onReplayIntro={onReplayIntro} />
           ) : null}
 
           {activeViewTab === "rules" ? (
@@ -1093,11 +1094,11 @@ function PlayerLeaderboard({ viewerToken, clearViewerToken }) {
   );
 }
 
-export default function PlayerPage({ viewerToken, setViewerToken, setAdminToken = () => {}, loginOnly = false }) {
+export default function PlayerPage({ viewerToken, setViewerToken, setAdminToken = () => {}, loginOnly = false, onReplayIntro }) {
   if (loginOnly) {
     return <PlayerLoginPage setViewerToken={setViewerToken} setAdminToken={setAdminToken} />;
   }
 
-  return <PlayerLeaderboard viewerToken={viewerToken} clearViewerToken={() => setViewerToken("")} />;
+  return <PlayerLeaderboard viewerToken={viewerToken} clearViewerToken={() => setViewerToken("")} onReplayIntro={onReplayIntro} />;
 }
 

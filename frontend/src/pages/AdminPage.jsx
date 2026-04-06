@@ -36,7 +36,7 @@ function formatDateTime(iso) {
 
 const TOTAL_TAB_ID = "__total__";
 
-export default function AdminPage({ adminToken, setAdminToken, loginOnly = false }) {
+export default function AdminPage({ adminToken, setAdminToken, loginOnly = false, onReplayIntro }) {
   const [username, setUsername] = useState("admin");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();

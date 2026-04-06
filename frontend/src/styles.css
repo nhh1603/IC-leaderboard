@@ -610,6 +610,12 @@ body {
   min-width: 0;
 }
 
+.story-top-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 10px;
+}
+
 .team-rename-bar {
   display: flex;
   align-items: center;
