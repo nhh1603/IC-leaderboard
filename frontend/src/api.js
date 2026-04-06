@@ -80,6 +80,24 @@ export async function updateTeam(token, teamId, name) {
   return response.json();
 }
 
+export async function updateMyTeamName(token, name) {
+  const response = await fetch(`${API_BASE_URL}/teams/me`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ name }),
+  });
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload.detail || "Unable to update team name");
+  }
+
+  return response.json();
+}
+
 export async function deleteTeam(token, teamId) {
   const response = await fetch(`${API_BASE_URL}/teams/${teamId}`, {
     method: "DELETE",

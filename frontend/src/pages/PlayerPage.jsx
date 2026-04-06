@@ -1,20 +1,53 @@
 import React from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import ReactMarkdown from "react-markdown";
 
 import {
+  fetchGames,
   fetchLeaderboard,
   fetchMyClues,
   fetchMyPerpetratorSubmissions,
   fetchPerpetratorPortal,
   fetchPlayers,
   fetchTeams,
+  getTeamActiveSession,
   getCurrentUser,
   getWsLeaderboardUrl,
   login,
   submitPerpetratorGuess,
+  updateMyTeamName,
 } from "../api";
 import StoryTab from "../components/StoryTab";
+
+function extractTextTitle(text) {
+  const m1 = text.match(/^#\s+(.+?)$/m);
+  if (m1) return m1[1].trim();
+  const m2 = text.match(/\[(.*?)\]/);
+  return m2 ? m2[1].trim() : "Rules";
+}
+
+function extractTextBody(text) {
+  const lines = text.split("\n");
+  const h1 = lines.findIndex((l) => l.startsWith("#"));
+  if (h1 >= 0) return lines.slice(h1 + 1).join("\n").trim();
+  const br = lines.findIndex((l) => l.startsWith("["));
+  if (br >= 0) return lines.slice(br + 1).join("\n").trim();
+  return text;
+}
+
+function isHtmlFallbackDocument(text) {
+  return /<!doctype html>/i.test(text) || /<div\s+id=["']root["']\s*>/i.test(text);
+}
+
+function toStoryKey(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
 
 const TOTAL_TAB_ID = "__total__";
 
@@ -131,6 +164,19 @@ function PlayerLeaderboard({ viewerToken, clearViewerToken }) {
   const [selectedPerpetratorName, setSelectedPerpetratorName] = useState("");
   const [isSubmittingPerpetrator, setIsSubmittingPerpetrator] = useState(false);
   const [viewerIdentity, setViewerIdentity] = useState({ username: "", account_type: "" });
+  const [currentTeamName, setCurrentTeamName] = useState("");
+  const [teamNameDraft, setTeamNameDraft] = useState("");
+  const [isUpdatingTeamName, setIsUpdatingTeamName] = useState(false);
+  const [isTeamNameModalOpen, setIsTeamNameModalOpen] = useState(false);
+  const [isStoryLockedByActiveGame, setIsStoryLockedByActiveGame] = useState(false);
+  const [activeSessionForLock, setActiveSessionForLock] = useState(null);
+  const [tabBeforeLock, setTabBeforeLock] = useState(null);
+  const [gameConfigById, setGameConfigById] = useState({});
+  const [rulesText, setRulesText] = useState("");
+  const [rulesTitle, setRulesTitle] = useState("Rules");
+  const [isLoadingRules, setIsLoadingRules] = useState(false);
+  const [gameEndSummary, setGameEndSummary] = useState(null);
+  const previousActiveSessionRef = useRef(null);
 
   const loadViewerTeam = async () => {
     try {
@@ -138,14 +184,36 @@ function PlayerLeaderboard({ viewerToken, clearViewerToken }) {
       setViewerIdentity({ username: viewer.username || "", account_type: viewer.account_type || "" });
       if (viewer.account_type !== "team") {
         setCurrentTeamId(null);
+        setIsStoryLockedByActiveGame(false);
+        setActiveSessionForLock(null);
         return;
       }
 
       const teams = await fetchTeams();
       const team = teams.find((entry) => entry.username === viewer.username);
       setCurrentTeamId(team?.id ?? null);
+      setCurrentTeamName(team?.name ?? "");
+      setTeamNameDraft(team?.name ?? "");
+
+      if (team?.id != null) {
+        try {
+          const session = await getTeamActiveSession(viewerToken, team.id);
+          setIsStoryLockedByActiveGame(Boolean(session));
+          setActiveSessionForLock(session || null);
+        } catch {
+          setIsStoryLockedByActiveGame(false);
+          setActiveSessionForLock(null);
+        }
+      } else {
+        setIsStoryLockedByActiveGame(false);
+        setActiveSessionForLock(null);
+      }
     } catch {
       setCurrentTeamId(null);
+      setCurrentTeamName("");
+      setTeamNameDraft("");
+      setIsStoryLockedByActiveGame(false);
+      setActiveSessionForLock(null);
     }
   };
 
@@ -229,6 +297,27 @@ function PlayerLeaderboard({ viewerToken, clearViewerToken }) {
     }
   };
 
+  const handleUpdateTeamName = async (event) => {
+    event.preventDefault();
+    if (viewerIdentity.account_type !== "team") return;
+    const nextName = teamNameDraft.trim();
+    if (!nextName || nextName === currentTeamName) return;
+
+    setIsUpdatingTeamName(true);
+    setError("");
+    try {
+      const updated = await updateMyTeamName(viewerToken, nextName);
+      setCurrentTeamName(updated.name || nextName);
+      setTeamNameDraft(updated.name || nextName);
+      setIsTeamNameModalOpen(false);
+      await loadViewerTeam();
+    } catch (err) {
+      setError(err.message || "Unable to update team name");
+    } finally {
+      setIsUpdatingTeamName(false);
+    }
+  };
+
   const toggleTeam = (teamId) => {
     setExpandedTeams((previous) => {
       const next = new Set(previous);
@@ -243,13 +332,55 @@ function PlayerLeaderboard({ viewerToken, clearViewerToken }) {
 
   const handleLogout = () => {
     setIsSidebarOpen(false);
+    setGameEndSummary(null);
     clearViewerToken();
     navigate("/login", { replace: true });
   };
 
+  const showGameEndPopup = async (endedSession) => {
+    if (!endedSession || currentTeamId === null) return;
+
+    try {
+      const [leaderboardPayload, cluesPayload] = await Promise.all([
+        fetchLeaderboard(viewerToken),
+        fetchMyClues(viewerToken),
+      ]);
+
+      const endedGame = (leaderboardPayload.games || []).find((game) => game.game_id === endedSession.game_id);
+      const teamEntry = (endedGame?.entries || []).find((entry) => entry.team_id === currentTeamId);
+      const clueGroup = (cluesPayload || []).find((group) => group.game_id === endedSession.game_id);
+
+      setGameEndSummary({
+        gameName: endedGame?.game_name || `Game ${endedSession.game_id}`,
+        score: Number(teamEntry?.total_score) || 0,
+        timeMilliseconds: Number(teamEntry?.total_time_milliseconds) || 0,
+        clues: clueGroup?.clues || [],
+      });
+    } catch {
+      setGameEndSummary({
+        gameName: `Game ${endedSession.game_id}`,
+        score: 0,
+        timeMilliseconds: 0,
+        clues: [],
+      });
+    }
+  };
+
   const selectViewTab = (tabName) => {
+    if (isStoryLockedByActiveGame && tabName !== "story" && tabName !== "rules") return;
     setActiveViewTab(tabName);
     setIsSidebarOpen(false);
+  };
+
+  const openTeamNameModal = () => {
+    setTeamNameDraft(currentTeamName);
+    setIsTeamNameModalOpen(true);
+  };
+
+  const closeTeamNameModal = () => {
+    if (isUpdatingTeamName) return;
+    setTeamNameDraft(currentTeamName);
+    setIsTeamNameModalOpen(false);
   };
 
   useEffect(() => {
@@ -324,6 +455,118 @@ function PlayerLeaderboard({ viewerToken, clearViewerToken }) {
   }, [currentTeamId, viewerToken]);
 
   useEffect(() => {
+    if (!viewerToken || currentTeamId === null || viewerIdentity.account_type !== "team") {
+      setIsStoryLockedByActiveGame(false);
+      setActiveSessionForLock(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    const refreshActiveSession = async () => {
+      try {
+        const session = await getTeamActiveSession(viewerToken, currentTeamId);
+        if (!cancelled) {
+          setIsStoryLockedByActiveGame(Boolean(session));
+          setActiveSessionForLock(session || null);
+        }
+      } catch {
+        if (!cancelled) {
+          setIsStoryLockedByActiveGame(false);
+          setActiveSessionForLock(null);
+        }
+      }
+    };
+
+    refreshActiveSession();
+    const intervalId = window.setInterval(refreshActiveSession, 2000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [viewerToken, currentTeamId, viewerIdentity.account_type]);
+
+  useEffect(() => {
+    if (!isStoryLockedByActiveGame) {
+      setRulesText("");
+      setRulesTitle("Rules");
+      if (tabBeforeLock !== null) {
+        setActiveViewTab(tabBeforeLock);
+        setTabBeforeLock(null);
+      }
+      return;
+    }
+    if (tabBeforeLock === null) {
+      setTabBeforeLock(activeViewTab);
+    }
+    if (activeViewTab !== "story" && activeViewTab !== "rules") {
+      setActiveViewTab("story");
+    }
+    setIsSidebarOpen(false);
+    setIsTeamNameModalOpen(false);
+  }, [isStoryLockedByActiveGame, tabBeforeLock, activeViewTab]);
+
+  useEffect(() => {
+    const previous = previousActiveSessionRef.current;
+    const current = activeSessionForLock;
+    const ended = previous && !current;
+
+    if (ended) {
+      showGameEndPopup(previous);
+    }
+
+    previousActiveSessionRef.current = current;
+  }, [activeSessionForLock]);
+
+  useEffect(() => {
+    if (!activeSessionForLock) return;
+    const activeGame = games.find((g) => g.game_id === activeSessionForLock.game_id);
+    const candidates = [
+      gameConfigById[activeSessionForLock.game_id],
+      toStoryKey(activeGame?.game_name),
+      String(activeSessionForLock.game_id),
+    ].filter(Boolean);
+
+    setIsLoadingRules(true);
+
+    const loadRules = async () => {
+      for (const key of candidates) {
+        try {
+          const response = await fetch(`/story/rules/${key}.txt`);
+          if (!response.ok) continue;
+          const text = await response.text();
+          if (isHtmlFallbackDocument(text)) continue;
+          setRulesTitle(extractTextTitle(text));
+          setRulesText(extractTextBody(text));
+          setIsLoadingRules(false);
+          return;
+        } catch {
+          // Try next candidate
+        }
+      }
+      setRulesTitle("Rules");
+      setRulesText("");
+      setIsLoadingRules(false);
+    };
+
+    loadRules();
+  }, [activeSessionForLock?.game_id, gameConfigById, games]);
+
+  useEffect(() => {
+    const loadGameCatalog = async () => {
+      try {
+        const allGames = await fetchGames();
+        const map = {};
+        for (const g of allGames) map[g.id] = g.config_key || "";
+        setGameConfigById(map);
+      } catch {
+        // non-critical
+      }
+    };
+    loadGameCatalog();
+  }, []);
+
+  useEffect(() => {
     const intervalId = window.setInterval(() => {
       loadPerpetratorPortal();
       if (currentTeamId !== null) {
@@ -378,6 +621,68 @@ function PlayerLeaderboard({ viewerToken, clearViewerToken }) {
   const activeGame = games.find((game) => game.game_id === activeGameId);
   const entries = activeGameId === TOTAL_TAB_ID ? totalEntries : (activeGame?.entries ?? []);
 
+  if (isStoryLockedByActiveGame) {
+    return (
+      <section className="panel player-panel">
+        <header className="panel-header">
+          <h2>Active Game</h2>
+          <div className="panel-actions">
+            <button type="button" className="sidebar-tab logout" onClick={handleLogout}>Sign out</button>
+          </div>
+        </header>
+
+        <p className="muted">Game in progress: only Story and Rules are available.</p>
+
+        <div className="view-tabs">
+          <button
+            type="button"
+            className={activeViewTab === "story" ? "game-tab active" : "game-tab"}
+            onClick={() => setActiveViewTab("story")}
+          >
+            Story
+          </button>
+          <button
+            type="button"
+            className={activeViewTab === "rules" ? "game-tab active" : "game-tab"}
+            onClick={() => setActiveViewTab("rules")}
+          >
+            Rules
+          </button>
+        </div>
+
+        {activeViewTab === "story" ? (
+          <StoryTab
+            games={games}
+            currentTeamId={currentTeamId}
+            viewerToken={viewerToken}
+            activeGameOnly
+            activeSessionOverride={activeSessionForLock}
+            gameConfigOverride={gameConfigById}
+          />
+        ) : null}
+
+        {activeViewTab === "rules" ? (
+          <section className="rules-section">
+            {isLoadingRules ? (
+              <p className="muted">Loading rules...</p>
+            ) : rulesText ? (
+              <div className="story-content-wrapper">
+                <div className="story-content">
+                  <h3>{rulesTitle}</h3>
+                  <div className="story-body">
+                    <ReactMarkdown>{rulesText}</ReactMarkdown>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <p className="muted">No rules available for this game.</p>
+            )}
+          </section>
+        ) : null}
+      </section>
+    );
+  }
+
   return (
     <section className="panel player-panel">
       <button
@@ -398,18 +703,98 @@ function PlayerLeaderboard({ viewerToken, clearViewerToken }) {
         </div>
       </header>
       <p className="muted">Logged in as: {viewerIdentity.username || "-"} ({viewerIdentity.account_type || "unknown"})</p>
+      {viewerIdentity.account_type === "team" ? (
+        <div className="team-rename-bar">
+          <p className="muted">Team name: <strong>{currentTeamName || "-"}</strong></p>
+          <button type="button" className="compact outline" onClick={openTeamNameModal}>
+            Change team name
+          </button>
+        </div>
+      ) : null}
+      {isStoryLockedByActiveGame ? (
+        <p className="muted">Game in progress: only Story is available until this game ends.</p>
+      ) : null}
       <p className="muted">Last updated: {formatDateTime(lastUpdated)}</p>
       {error ? <p className="error-text">{error}</p> : null}
 
+      {gameEndSummary ? (
+        <div className="game-end-overlay" role="presentation" onClick={() => setGameEndSummary(null)}>
+          <div className="game-end-popup" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+            <h3>Congratulations!</h3>
+            <p className="muted">You completed <strong>{gameEndSummary.gameName}</strong>.</p>
+
+            <div className="game-end-stats">
+              <p><strong>Score earned:</strong> {gameEndSummary.score} ★</p>
+              <p><strong>Time used:</strong> {formatDuration(gameEndSummary.timeMilliseconds)}</p>
+              <p><strong>Clues earned:</strong> {gameEndSummary.clues.length}</p>
+            </div>
+
+            {gameEndSummary.clues.length > 0 ? (
+              <ul className="game-end-clues">
+                {gameEndSummary.clues.map((clue) => (
+                  <li key={clue.id || `${clue.clue_order}-${clue.clue_text}`}>
+                    <strong>Clue {clue.clue_order}:</strong> {clue.clue_text}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+
+            <div className="game-end-actions">
+              <button type="button" onClick={() => setGameEndSummary(null)}>Close</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {isTeamNameModalOpen ? (
+        <div className="team-name-modal-overlay" role="presentation" onClick={closeTeamNameModal}>
+          <div
+            className="team-name-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="team-name-modal-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h3 id="team-name-modal-title">Change team name</h3>
+            <form className="form-grid" onSubmit={handleUpdateTeamName}>
+              <label>
+                New team name
+                <input
+                  value={teamNameDraft}
+                  onChange={(event) => setTeamNameDraft(event.target.value)}
+                  placeholder="Enter your new team name"
+                  maxLength={80}
+                  autoFocus
+                  required
+                />
+              </label>
+              <div className="team-name-modal-actions">
+                <button type="button" className="compact neutral" onClick={closeTeamNameModal} disabled={isUpdatingTeamName}>
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUpdatingTeamName || !teamNameDraft.trim() || teamNameDraft.trim() === currentTeamName}
+                >
+                  {isUpdatingTeamName ? "Saving..." : "Confirm change"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
+
       <div className="player-layout">
         <aside className={isSidebarOpen ? "player-sidebar open" : "player-sidebar"}>
-          <button
-            type="button"
-            className={activeViewTab === "leaderboard" ? "sidebar-tab active" : "sidebar-tab"}
-            onClick={() => selectViewTab("leaderboard")}
-          >
-            Leaderboard
-          </button>
+          {!isStoryLockedByActiveGame ? (
+            <button
+              type="button"
+              className={activeViewTab === "leaderboard" ? "sidebar-tab active" : "sidebar-tab"}
+              onClick={() => selectViewTab("leaderboard")}
+            >
+              Leaderboard
+            </button>
+          ) : null}
           <button
             type="button"
             className={activeViewTab === "story" ? "sidebar-tab active" : "sidebar-tab"}
@@ -417,20 +802,33 @@ function PlayerLeaderboard({ viewerToken, clearViewerToken }) {
           >
             Story
           </button>
-          <button
-            type="button"
-            className={activeViewTab === "clues" ? "sidebar-tab active" : "sidebar-tab"}
-            onClick={() => selectViewTab("clues")}
-          >
-            Clues
-          </button>
-          <button
-            type="button"
-            className={activeViewTab === "perpetrator" ? "sidebar-tab active" : "sidebar-tab"}
-            onClick={() => selectViewTab("perpetrator")}
-          >
-            Perpetrator
-          </button>
+          {isStoryLockedByActiveGame ? (
+            <button
+              type="button"
+              className={activeViewTab === "rules" ? "sidebar-tab active" : "sidebar-tab"}
+              onClick={() => selectViewTab("rules")}
+            >
+              Rules
+            </button>
+          ) : null}
+          {!isStoryLockedByActiveGame ? (
+            <button
+              type="button"
+              className={activeViewTab === "clues" ? "sidebar-tab active" : "sidebar-tab"}
+              onClick={() => selectViewTab("clues")}
+            >
+              Clues
+            </button>
+          ) : null}
+          {!isStoryLockedByActiveGame ? (
+            <button
+              type="button"
+              className={activeViewTab === "perpetrator" ? "sidebar-tab active" : "sidebar-tab"}
+              onClick={() => selectViewTab("perpetrator")}
+            >
+              Perpetrator
+            </button>
+          ) : null}
           <button type="button" className="sidebar-tab logout" onClick={handleLogout}>
             Sign out
           </button>
@@ -473,6 +871,25 @@ function PlayerLeaderboard({ viewerToken, clearViewerToken }) {
 
           {activeViewTab === "story" ? (
             <StoryTab games={games} currentTeamId={currentTeamId} viewerToken={viewerToken} />
+          ) : null}
+
+          {activeViewTab === "rules" ? (
+            <section className="rules-section">
+              {isLoadingRules ? (
+                <p className="muted">Loading rules...</p>
+              ) : rulesText ? (
+                <div className="story-content-wrapper">
+                  <div className="story-content">
+                    <h3>{rulesTitle}</h3>
+                    <div className="story-body">
+                      <ReactMarkdown>{rulesText}</ReactMarkdown>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <p className="muted">No rules available for this game.</p>
+              )}
+            </section>
           ) : null}
 
           {activeViewTab === "perpetrator" ? (

@@ -328,6 +328,31 @@ def update_team(
     return team
 
 
+@app.put("/teams/me", response_model=TeamResponse)
+def update_my_team(
+    payload: TeamUpdateRequest,
+    auth: tuple[str, str] = Depends(require_token),
+    db: Session = Depends(get_db),
+) -> Team:
+    username, account_type = auth
+    if account_type != "team":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Team account required")
+
+    team = db.scalar(select(Team).where(Team.username == username))
+    if team is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
+
+    team.name = payload.name.strip()
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Team name already exists") from exc
+
+    db.refresh(team)
+    return team
+
+
 @app.delete("/teams/{team_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_team(
     team_id: int,
@@ -674,11 +699,15 @@ async def start_game_session(
             GameSession.team_id == payload.team_id,
             GameSession.is_active == True,
         )
-    ).all()
-    for running in active_for_team:
-        if running.game_id != payload.game_id:
-            running.is_active = False
-            running.ended_at = func.now()
+    ).first()
+
+    if active_for_team is not None:
+        if active_for_team.game_id == payload.game_id:
+            return active_for_team
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This team already has an active game session",
+        )
 
     # Persist unlock forever by reusing one row per team+game.
     session = db.scalars(

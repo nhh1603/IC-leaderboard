@@ -4,12 +4,8 @@ import { useNavigate } from "react-router-dom";
 
 import {
   createGame,
-  createPlayer,
-  createTeam,
   deleteGame,
-  deletePlayer,
   deleteTimerRound,
-  deleteTeam,
   endGameSession,
   fetchAllPerpetratorSubmissions,
   fetchGames,
@@ -25,16 +21,7 @@ import {
   submitScore,
   updatePerpetratorPortal,
   updateGame,
-  updatePlayer,
-  updateTeam,
 } from "../api";
-
-function parsePlayerNames(raw) {
-  return raw
-    .split(/[\n,]+/)
-    .map((name) => name.trim())
-    .filter(Boolean);
-}
 
 function formatDuration(milliseconds) {
   const total = Math.max(0, Number(milliseconds) || 0);
@@ -60,14 +47,7 @@ export default function AdminPage({ adminToken, setAdminToken, loginOnly = false
 
   const [teams, setTeams] = useState([]);
   const [allPlayers, setAllPlayers] = useState([]);
-  const [newTeamName, setNewTeamName] = useState("");
-  const [newTeamPlayersText, setNewTeamPlayersText] = useState("");
   const [selectedTeamId, setSelectedTeamId] = useState("");
-
-  const [editingTeam, setEditingTeam] = useState(null);
-  const [editingPlayerId, setEditingPlayerId] = useState(null);
-  const [editingPlayerName, setEditingPlayerName] = useState("");
-  const [newPlayerByTeam, setNewPlayerByTeam] = useState({});
 
   const [games, setGames] = useState([]);
   const [newGameName, setNewGameName] = useState("");
@@ -256,107 +236,6 @@ export default function AdminPage({ adminToken, setAdminToken, loginOnly = false
       }
       return next;
     });
-  };
-
-  const handleCreateTeam = async (event) => {
-    event.preventDefault();
-    if (!adminToken) return;
-    setErrorText("");
-    setStatusText("");
-
-    const playerNames = parsePlayerNames(newTeamPlayersText);
-    try {
-      const payload = await createTeam(adminToken, newTeamName, playerNames);
-      setNewTeamName("");
-      setNewTeamPlayersText("");
-      setStatusText(`Created team: ${payload.name}`);
-      await Promise.all([loadTeams(), loadAllPlayers()]);
-      setSelectedTeamId(String(payload.id));
-    } catch (err) {
-      setErrorText(err.message);
-    }
-  };
-
-  const handleUpdateTeam = async (event) => {
-    event.preventDefault();
-    if (!adminToken || !editingTeam) return;
-    setErrorText("");
-    setStatusText("");
-    try {
-      const payload = await updateTeam(adminToken, editingTeam.id, editingTeam.name);
-      setEditingTeam(null);
-      setStatusText(`Updated team: ${payload.name}`);
-      await loadTeams();
-    } catch (err) {
-      setErrorText(err.message);
-    }
-  };
-
-  const handleDeleteTeam = async (teamId, teamName) => {
-    if (!adminToken) return;
-    if (!window.confirm(`Delete team "${teamName}"? This will remove players and scores.`)) return;
-    setErrorText("");
-    setStatusText("");
-    try {
-      await deleteTeam(adminToken, teamId);
-      setStatusText(`Deleted team: ${teamName}`);
-      if (String(teamId) === String(selectedTeamId)) setSelectedTeamId("");
-      await Promise.all([loadTeams(), loadAllPlayers()]);
-    } catch (err) {
-      setErrorText(err.message);
-    }
-  };
-
-  const handleCreatePlayer = async (teamId) => {
-    if (!adminToken) return;
-    const name = (newPlayerByTeam[teamId] || "").trim();
-    if (!name) return;
-
-    setErrorText("");
-    setStatusText("");
-    try {
-      const payload = await createPlayer(adminToken, teamId, name);
-      setStatusText(`Added player: ${payload.name}`);
-      setNewPlayerByTeam((prev) => ({ ...prev, [teamId]: "" }));
-      await loadAllPlayers();
-    } catch (err) {
-      setErrorText(err.message);
-    }
-  };
-
-  const startEditPlayer = (player) => {
-    setEditingPlayerId(player.id);
-    setEditingPlayerName(player.name);
-  };
-
-  const handleUpdatePlayer = async (player) => {
-    if (!adminToken || !editingPlayerName.trim()) return;
-    setErrorText("");
-    setStatusText("");
-    try {
-      const payload = await updatePlayer(adminToken, player.id, player.team_id, editingPlayerName.trim());
-      setStatusText(`Updated player: ${payload.name}`);
-      setEditingPlayerId(null);
-      setEditingPlayerName("");
-      await loadAllPlayers();
-    } catch (err) {
-      setErrorText(err.message);
-    }
-  };
-
-  const handleDeletePlayer = async (player) => {
-    if (!adminToken) return;
-    if (!window.confirm(`Delete player "${player.name}"?`)) return;
-
-    setErrorText("");
-    setStatusText("");
-    try {
-      await deletePlayer(adminToken, player.id);
-      setStatusText(`Deleted player: ${player.name}`);
-      await loadAllPlayers();
-    } catch (err) {
-      setErrorText(err.message);
-    }
   };
 
   const handleCreateGame = async (event) => {
@@ -680,74 +559,20 @@ export default function AdminPage({ adminToken, setAdminToken, loginOnly = false
           <div className="admin-content">
             {activeTab === "team" && (
               <>
-                <h3>Create team with players</h3>
-                <form className="form-grid" onSubmit={handleCreateTeam}>
-                  <label>
-                    Team name
-                    <input
-                      value={newTeamName}
-                      onChange={(e) => setNewTeamName(e.target.value)}
-                      placeholder="Team name"
-                      required
-                    />
-                  </label>
-                  <label>
-                    Players (comma or new line separated)
-                    <textarea
-                      value={newTeamPlayersText}
-                      onChange={(e) => setNewTeamPlayersText(e.target.value)}
-                      placeholder="Alice, Bob, Charlie"
-                      rows={3}
-                    />
-                  </label>
-                  <button type="submit">Create team</button>
-                </form>
-
-                <h3>Current teams</h3>
+                <h3>Available teams</h3>
+                <p className="muted">Teams are managed from config files. This view is read-only.</p>
                 <div className="team-cards">
                   {teams.length === 0 ? (
                     <p className="muted">No teams yet.</p>
                   ) : teams.map((team) => {
                     const teamPlayers = playersByTeam[team.id] || [];
-                    const isEditingTeam = editingTeam?.id === team.id;
                     return (
                       <section key={team.id} className="team-card">
                         <div className="team-card-header">
-                          {isEditingTeam ? (
-                            <form className="inline-edit" onSubmit={handleUpdateTeam}>
-                              <input
-                                value={editingTeam.name}
-                                onChange={(e) => setEditingTeam({ ...editingTeam, name: e.target.value })}
-                                required
-                              />
-                              <button type="submit" className="compact">Save</button>
-                              <button type="button" className="compact neutral" onClick={() => setEditingTeam(null)}>Cancel</button>
-                            </form>
-                          ) : (
-                            <div>
-                              <h4>{team.name}</h4>
-                              <p className="muted">Username: {team.username || "-"}</p>
-                            </div>
-                          )}
-
-                          {!isEditingTeam && (
-                            <div className="action-buttons">
-                              <button
-                                type="button"
-                                className="compact outline"
-                                onClick={() => setEditingTeam({ id: team.id, name: team.name })}
-                              >
-                                Rename
-                              </button>
-                              <button
-                                type="button"
-                                className="compact danger"
-                                onClick={() => handleDeleteTeam(team.id, team.name)}
-                              >
-                                Delete
-                              </button>
-                            </div>
-                          )}
+                          <div>
+                            <h4>{team.name}</h4>
+                            <p className="muted">Username: {team.username || "-"}</p>
+                          </div>
                         </div>
 
                         <div className="team-card-body">
@@ -757,47 +582,11 @@ export default function AdminPage({ adminToken, setAdminToken, loginOnly = false
                             <ul className="managed-player-list">
                               {teamPlayers.map((player) => (
                                 <li key={player.id}>
-                                  {editingPlayerId === player.id ? (
-                                    <>
-                                      <input
-                                        value={editingPlayerName}
-                                        onChange={(e) => setEditingPlayerName(e.target.value)}
-                                        className="player-inline-input"
-                                      />
-                                      <button type="button" className="compact" onClick={() => handleUpdatePlayer(player)}>Save</button>
-                                      <button
-                                        type="button"
-                                        className="compact neutral"
-                                        onClick={() => {
-                                          setEditingPlayerId(null);
-                                          setEditingPlayerName("");
-                                        }}
-                                      >
-                                        Cancel
-                                      </button>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <span>{player.name}</span>
-                                      <div className="action-buttons">
-                                        <button type="button" className="compact outline" onClick={() => startEditPlayer(player)}>Edit</button>
-                                        <button type="button" className="compact danger" onClick={() => handleDeletePlayer(player)}>Delete</button>
-                                      </div>
-                                    </>
-                                  )}
+                                  <span>{player.name}</span>
                                 </li>
                               ))}
                             </ul>
                           )}
-
-                          <div className="inline-create">
-                            <input
-                              value={newPlayerByTeam[team.id] || ""}
-                              onChange={(e) => setNewPlayerByTeam((prev) => ({ ...prev, [team.id]: e.target.value }))}
-                              placeholder="New player name"
-                            />
-                            <button type="button" onClick={() => handleCreatePlayer(team.id)}>Add player</button>
-                          </div>
                         </div>
                       </section>
                     );

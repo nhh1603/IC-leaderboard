@@ -1,0 +1,96 @@
+# LUẬT CHƠI:
+
+Trò chơi gồm 2 vòng, xoay quanh chiếc bịt mắt
+
+---
+
+## VÒNG 1: BỊT MẮT BẮT BÓNG (10 phút)
+
+### 1. Cách chia đội
+- Mỗi nhóm chia thành 2 đội nhỏ
+- Mỗi đội nhỏ gồm 3 người:
+  - Người chuyền bóng
+  - Người hứng bóng
+  - Người điều phối
+
+### 2. Cách chơi
+- Mỗi đội chơi trong 5 phút
+- Mỗi lượt chơi diễn ra như sau:
+  1. Người chuyền bóng đeo bịt mắt khi đã cầm bóng
+  2. Di chuyển đến vị trí quy định
+  3. Xoay 3 vòng
+  4. Ném bóng cho người hứng bóng
+
+- Người hứng bóng:
+  - Đứng cố định trong vòng tròn
+  - Bắt bóng từ người chuyền
+
+- Người điều phối:
+  - Là người duy nhất được nói
+  - Hướng dẫn 2 người còn lại phối hợp
+
+### 3. Kết thúc lượt chơi
+- Lượt chơi kết thúc khi:
+  - Bắt được bóng, hoặc
+  - Có phạm luật
+
+- Sau mỗi lượt, đổi vai theo thứ tự:
+  - Chuyền → Hứng → Điều phối → Chuyền
+
+### 4. Điều kiện kết thúc
+- Hết 5 phút, hoặc
+- Đạt 6 điểm
+
+### 5. Cách tính điểm
+- 1 lần bắt bóng thành công = 1 điểm
+- Đạt 6 điểm trước thời gian: +1 điểm bonus
+
+### 6. Phạm luật
+- Người chuyền hoặc người hứng nói
+- Người ngoài cuộc nói
+- Người chuyền:
+  - Xuất phát quá vạch
+  - Ném bóng quá vạch
+  - Xoay chưa đủ 3 vòng
+- Người hứng:
+  - Bước ra khỏi vòng tròn
+
+---
+
+## VÒNG 2: BỊT MẮT XẾP TRANH (10 phút)
+
+### 1. Cách chia đội
+- Chia thành 3 cặp
+- Mỗi cặp gồm:
+  - 1 người điều phối
+  - 1 người xếp tranh (bị bịt mắt)
+
+### 2. Cách chơi
+- Một bức tranh được xé thành nhiều mảnh
+- Nhiệm vụ: ghép lại thành bức tranh hoàn chỉnh
+
+- Người xếp tranh:
+  - Bị bịt mắt
+  - Làm theo hướng dẫn
+
+- Người điều phối:
+  - Là người duy nhất được nói
+  - Hướng dẫn đồng đội
+
+### 3. Điều kiện kết thúc
+- Hết 10 phút, hoặc
+- Hoàn thành bức tranh
+
+### 4. Cách tính điểm
+- 1 mảnh đúng vị trí = 1 điểm
+- Hoàn thành toàn bộ tranh: +2 điểm bonus
+- Mỗi 2 lần phạm luật: -1 điểm
+
+### 5. Phạm luật
+- Người xếp tranh nói
+- Thiếu phối hợp:
+  - Người điều phối không hướng dẫn
+  - Người xếp tranh dừng hoạt động
+  - Thành viên không tham gia trong thời gian dài
+
+- Quản trò có toàn quyền quyết định các lỗi phát sinh
