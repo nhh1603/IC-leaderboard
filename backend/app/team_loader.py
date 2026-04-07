@@ -10,6 +10,47 @@ from app.models import Team, Player
 TEAMS_DIR = Path(__file__).parent.parent / "teams"
 
 
+def _parse_game_orders(raw_value) -> list[int]:
+    if raw_value is None:
+        return []
+
+    if isinstance(raw_value, list):
+        values = raw_value
+    else:
+        values = str(raw_value).split(",")
+
+    parsed: list[int] = []
+    for value in values:
+        text = str(value).strip()
+        if not text:
+            continue
+        try:
+            parsed.append(int(text))
+        except ValueError:
+            continue
+    return parsed
+
+
+def load_team_game_orders_from_config() -> dict[str, list[int]]:
+    game_orders_by_config_key: dict[str, list[int]] = {}
+    if not TEAMS_DIR.exists():
+        return game_orders_by_config_key
+
+    for config_file in sorted(TEAMS_DIR.glob("*.yaml")):
+        config_key = config_file.stem
+        try:
+            data = yaml.safe_load(config_file.read_text(encoding="utf-8")) or {}
+        except Exception:
+            game_orders_by_config_key[config_key] = []
+            continue
+
+        game_orders_by_config_key[config_key] = _parse_game_orders(
+            data.get("game_orders", data.get("game_order"))
+        )
+
+    return game_orders_by_config_key
+
+
 def normalize_username(name: str) -> str:
     """Normalize team name to username (lowercase, replace spaces with underscores)."""
     return name.strip().lower().replace(" ", "_").replace("-", "_")

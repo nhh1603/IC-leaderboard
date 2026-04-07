@@ -14,7 +14,7 @@ from app.config import settings
 from app.database import Base, SessionLocal, engine, get_db
 from app.game_loader import load_games_from_config
 from app.game_loader import get_game_clues
-from app.team_loader import load_teams_from_config, normalize_username
+from app.team_loader import load_team_game_orders_from_config, load_teams_from_config, normalize_username
 from app.leaderboard import get_leaderboard
 from app.models import ClueAward, Game, GameSession, PerpetratorPortal, PerpetratorSubmission, Player, ScoreEvent, Team, TimerRound
 from app.schemas import (
@@ -220,6 +220,17 @@ def list_perpetrator_options() -> list[dict[str, str | None]]:
     ]
 
 
+def serialize_team(team: Team, game_orders: list[int] | None = None) -> TeamResponse:
+    return TeamResponse(
+        id=team.id,
+        name=team.name,
+        username=team.username,
+        config_key=team.config_key,
+        game_orders=game_orders or [],
+        created_at=team.created_at,
+    )
+
+
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok"}
@@ -252,7 +263,7 @@ def create_team(
     payload: TeamCreateRequest,
     _: str = Depends(require_admin),
     db: Session = Depends(get_db),
-) -> Team:
+) -> TeamResponse:
     cleaned_names = [name.strip() for name in payload.player_names if name.strip()]
     if len(cleaned_names) > MAX_PLAYERS_PER_TEAM:
         raise HTTPException(
@@ -284,21 +295,23 @@ def create_team(
         ) from exc
 
     db.refresh(team)
-    return team
+    return serialize_team(team, [])
 
 
 @app.get("/teams", response_model=list[TeamResponse])
 def list_teams(db: Session = Depends(get_db)) -> list[TeamResponse]:
     teams: Sequence[Team] = db.scalars(select(Team).order_by(Team.created_at.asc())).all()
-    return [TeamResponse.model_validate(team) for team in teams]
+    orders_by_config = load_team_game_orders_from_config()
+    return [serialize_team(team, orders_by_config.get(team.config_key or "")) for team in teams]
 
 
 @app.get("/teams/{team_id}", response_model=TeamResponse)
-def get_team(team_id: int, db: Session = Depends(get_db)) -> Team:
+def get_team(team_id: int, db: Session = Depends(get_db)) -> TeamResponse:
     team = db.get(Team, team_id)
     if team is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
-    return team
+    orders_by_config = load_team_game_orders_from_config()
+    return serialize_team(team, orders_by_config.get(team.config_key or ""))
 
 
 @app.put("/teams/{team_id}", response_model=TeamResponse)
@@ -307,7 +320,7 @@ def update_team(
     payload: TeamUpdateRequest,
     _: str = Depends(require_admin),
     db: Session = Depends(get_db),
-) -> Team:
+) -> TeamResponse:
     team = db.get(Team, team_id)
     if team is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
@@ -325,7 +338,8 @@ def update_team(
         ) from exc
 
     db.refresh(team)
-    return team
+    orders_by_config = load_team_game_orders_from_config()
+    return serialize_team(team, orders_by_config.get(team.config_key or ""))
 
 
 @app.put("/teams/me", response_model=TeamResponse)
@@ -333,7 +347,7 @@ def update_my_team(
     payload: TeamUpdateRequest,
     auth: tuple[str, str] = Depends(require_token),
     db: Session = Depends(get_db),
-) -> Team:
+) -> TeamResponse:
     username, account_type = auth
     if account_type != "team":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Team account required")
@@ -350,7 +364,8 @@ def update_my_team(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Team name already exists") from exc
 
     db.refresh(team)
-    return team
+    orders_by_config = load_team_game_orders_from_config()
+    return serialize_team(team, orders_by_config.get(team.config_key or ""))
 
 
 @app.delete("/teams/{team_id}", status_code=status.HTTP_204_NO_CONTENT)

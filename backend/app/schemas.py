@@ -45,6 +45,7 @@ class TeamResponse(BaseModel):
     name: str
     username: str | None = None
     config_key: str | None = None
+    game_orders: list[int] = Field(default_factory=list)
     created_at: datetime
 
     class Config:

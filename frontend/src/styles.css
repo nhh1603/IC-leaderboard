@@ -1715,6 +1715,46 @@ h3 {
   color: #7a5c60;
 }
 
+.map-section {
+  display: grid;
+  gap: 14px;
+}
+
+.map-visual {
+  border: 2px solid rgba(193, 18, 31, 0.15);
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(255, 248, 249, 0.6), rgba(255, 240, 243, 0.4));
+  padding: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06), inset 0 0 12px rgba(193, 18, 31, 0.04);
+}
+
+.map-visual img {
+  display: block;
+  width: 100%;
+  max-height: 66vh;
+  object-fit: contain;
+  border-radius: 6px;
+}
+
+.map-order {
+  border: 2px solid rgba(193, 18, 31, 0.15);
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(255, 248, 249, 0.6), rgba(255, 240, 243, 0.4));
+  padding: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06), inset 0 0 12px rgba(193, 18, 31, 0.04);
+}
+
+.map-order h3 {
+  margin: 0 0 8px;
+}
+
+.map-order ol {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 4px;
+}
+
 .story-body ul,
 .story-body ol {
   padding-left: 20px;

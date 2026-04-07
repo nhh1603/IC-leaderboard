@@ -165,6 +165,7 @@ function PlayerLeaderboard({ viewerToken, clearViewerToken, onReplayIntro }) {
   const [isSubmittingPerpetrator, setIsSubmittingPerpetrator] = useState(false);
   const [viewerIdentity, setViewerIdentity] = useState({ username: "", account_type: "" });
   const [currentTeamName, setCurrentTeamName] = useState("");
+  const [currentTeamGameOrders, setCurrentTeamGameOrders] = useState([]);
   const [teamNameDraft, setTeamNameDraft] = useState("");
   const [isUpdatingTeamName, setIsUpdatingTeamName] = useState(false);
   const [isTeamNameModalOpen, setIsTeamNameModalOpen] = useState(false);
@@ -193,6 +194,7 @@ function PlayerLeaderboard({ viewerToken, clearViewerToken, onReplayIntro }) {
       const team = teams.find((entry) => entry.username === viewer.username);
       setCurrentTeamId(team?.id ?? null);
       setCurrentTeamName(team?.name ?? "");
+      setCurrentTeamGameOrders(Array.isArray(team?.game_orders) ? team.game_orders : []);
       setTeamNameDraft(team?.name ?? "");
 
       if (team?.id != null) {
@@ -211,6 +213,7 @@ function PlayerLeaderboard({ viewerToken, clearViewerToken, onReplayIntro }) {
     } catch {
       setCurrentTeamId(null);
       setCurrentTeamName("");
+      setCurrentTeamGameOrders([]);
       setTeamNameDraft("");
       setIsStoryLockedByActiveGame(false);
       setActiveSessionForLock(null);
@@ -796,6 +799,15 @@ function PlayerLeaderboard({ viewerToken, clearViewerToken, onReplayIntro }) {
               Leaderboard
             </button>
           ) : null}
+          {!isStoryLockedByActiveGame ? (
+            <button
+              type="button"
+              className={activeViewTab === "map" ? "sidebar-tab active" : "sidebar-tab"}
+              onClick={() => selectViewTab("map")}
+            >
+              Map
+            </button>
+          ) : null}
           <button
             type="button"
             className={activeViewTab === "story" ? "sidebar-tab active" : "sidebar-tab"}
@@ -872,6 +884,26 @@ function PlayerLeaderboard({ viewerToken, clearViewerToken, onReplayIntro }) {
 
           {activeViewTab === "story" ? (
             <StoryTab games={games} currentTeamId={currentTeamId} viewerToken={viewerToken} onReplayIntro={onReplayIntro} />
+          ) : null}
+
+          {activeViewTab === "map" ? (
+            <section className="map-section">
+              <div className="map-visual">
+                <img src="/map.png" alt="Game map" />
+              </div>
+              <div className="map-order">
+                <h3>Game Order</h3>
+                {currentTeamGameOrders.length > 0 ? (
+                  <ol>
+                    {currentTeamGameOrders.map((order, index) => (
+                      <li key={`${order}-${index}`}>Game {order}</li>
+                    ))}
+                  </ol>
+                ) : (
+                  <p className="muted">No game order found for your team config.</p>
+                )}
+              </div>
+            </section>
           ) : null}
 
           {activeViewTab === "rules" ? (
