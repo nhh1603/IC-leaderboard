@@ -1736,6 +1736,23 @@ h3 {
   border-radius: 6px;
 }
 
+.blood-drop-fx {
+  position: fixed;
+  width: 48px;
+  height: 48px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  animation: blood-drop-in 900ms ease forwards;
+  z-index: 9999;
+}
+
+@keyframes blood-drop-in {
+  0%   { opacity: 1;   transform: translate(-50%, -50%) scale(0.4); }
+  30%  { opacity: 1;   transform: translate(-50%, -50%) scale(1.15); }
+  60%  { opacity: 0.9; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0;   transform: translate(-50%, -50%) scale(1.1); }
+}
+
 .map-order {
   border: 2px solid rgba(193, 18, 31, 0.15);
   border-radius: 8px;

@@ -65,6 +65,17 @@ export default function App() {
   const [viewerToken, setViewerToken] = useState(() => window.localStorage.getItem("viewer_token") || "");
   const [showIntro, setShowIntro] = useState(false);
   const [introReplayCount, setIntroReplayCount] = useState(0);
+  const [bloodDrops, setBloodDrops] = useState([]);
+
+  const handleGlobalClick = (event) => {
+    const x = event.clientX;
+    const y = event.clientY;
+    const id = Date.now() + Math.random();
+    setBloodDrops((previous) => [...previous, { id, x, y }]);
+    setTimeout(() => {
+      setBloodDrops((previous) => previous.filter((drop) => drop.id !== id));
+    }, 900);
+  };
 
   useEffect(() => {
     const hasSeenIntro = window.localStorage.getItem(INTRO_SEEN_KEY) === "true";
@@ -100,7 +111,17 @@ export default function App() {
   }, [viewerToken]);
 
   return (
-    <main className="app-shell">
+    <main className="app-shell" onClick={handleGlobalClick}>
+      {bloodDrops.map((drop) => (
+        <img
+          key={drop.id}
+          src="/blood_drop.png"
+          alt=""
+          aria-hidden="true"
+          className="blood-drop-fx"
+          style={{ left: drop.x, top: drop.y }}
+        />
+      ))}
       {showIntro ? <StoryIntro key={introReplayCount} onFinish={finishIntro} /> : null}
 
       <Routes>
