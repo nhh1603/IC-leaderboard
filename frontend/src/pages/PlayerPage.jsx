@@ -309,11 +309,22 @@ function PlayerLeaderboard({ viewerToken, clearViewerToken, onReplayIntro }) {
     setIsUpdatingTeamName(true);
     setError("");
     try {
+      // Update team name via API
       const updated = await updateMyTeamName(viewerToken, nextName);
+      
+      // Optimistic update - show new name immediately
       setCurrentTeamName(updated.name || nextName);
       setTeamNameDraft(updated.name || nextName);
       setIsTeamNameModalOpen(false);
-      await loadViewerTeam();
+      
+      // Refresh data in parallel (don't wait sequentially)
+      Promise.all([loadViewerTeam(), fetchLeaderboard(viewerToken)])
+        .then(([, payload]) => {
+          applySnapshot(payload);
+        })
+        .catch((err) => {
+          setError(err.message || "Unable to refresh data");
+        });
     } catch (err) {
       setError(err.message || "Unable to update team name");
     } finally {

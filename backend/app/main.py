@@ -314,6 +314,32 @@ def get_team(team_id: int, db: Session = Depends(get_db)) -> TeamResponse:
     return serialize_team(team, orders_by_config.get(team.config_key or ""))
 
 
+@app.put("/teams/me", response_model=TeamResponse)
+def update_my_team(
+    payload: TeamUpdateRequest,
+    auth: tuple[str, str] = Depends(require_token),
+    db: Session = Depends(get_db),
+) -> TeamResponse:
+    username, account_type = auth
+    if account_type != "team":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Team account required")
+
+    team = db.scalar(select(Team).where(Team.username == username))
+    if team is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
+
+    team.name = payload.name.strip()
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Team name already exists") from exc
+
+    db.refresh(team)
+    orders_by_config = load_team_game_orders_from_config()
+    return serialize_team(team, orders_by_config.get(team.config_key or ""))
+
+
 @app.put("/teams/{team_id}", response_model=TeamResponse)
 def update_team(
     team_id: int,
@@ -336,32 +362,6 @@ def update_team(
             status_code=status.HTTP_409_CONFLICT,
             detail="Team name or username already exists",
         ) from exc
-
-    db.refresh(team)
-    orders_by_config = load_team_game_orders_from_config()
-    return serialize_team(team, orders_by_config.get(team.config_key or ""))
-
-
-@app.put("/teams/me", response_model=TeamResponse)
-def update_my_team(
-    payload: TeamUpdateRequest,
-    auth: tuple[str, str] = Depends(require_token),
-    db: Session = Depends(get_db),
-) -> TeamResponse:
-    username, account_type = auth
-    if account_type != "team":
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Team account required")
-
-    team = db.scalar(select(Team).where(Team.username == username))
-    if team is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
-
-    team.name = payload.name.strip()
-    try:
-        db.commit()
-    except IntegrityError as exc:
-        db.rollback()
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Team name already exists") from exc
 
     db.refresh(team)
     orders_by_config = load_team_game_orders_from_config()
