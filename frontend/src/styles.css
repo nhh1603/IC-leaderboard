@@ -687,16 +687,17 @@ body {
   position: fixed;
   inset: 0;
   z-index: 140;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  place-items: center;
   padding: 24px;
   background: rgba(16, 5, 7, 0.68);
   backdrop-filter: blur(3px);
+  overflow-y: auto;
 }
 
 .game-end-popup {
   width: min(560px, 100%);
+  max-height: min(88vh, 760px);
   border: 2px solid rgba(193, 18, 31, 0.42);
   border-radius: 12px;
   background: linear-gradient(135deg, rgba(34, 11, 14, 0.98), rgba(60, 16, 22, 0.98));
@@ -704,6 +705,8 @@ body {
   box-shadow: 0 28px 70px rgba(0, 0, 0, 0.55), inset 0 0 34px rgba(193, 18, 31, 0.16);
   padding: 18px 20px;
   animation: game-end-fly-fade-in 420ms ease both;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .game-end-popup h3 {
@@ -1882,5 +1885,19 @@ h3 {
 
   .story-content-wrapper {
     max-height: 500px;
+  }
+
+  .game-end-overlay {
+    padding: 12px;
+  }
+
+  .game-end-popup {
+    width: min(100%, 430px);
+    max-height: 84vh;
+    padding: 14px;
+  }
+
+  .game-end-popup h3 {
+    font-size: 22px;
   }
 }
