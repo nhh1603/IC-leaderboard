@@ -368,6 +368,8 @@ function PlayerLeaderboard({ viewerToken, clearViewerToken, onReplayIntro }) {
         gameName: endedGame?.game_name || `Game ${endedSession.game_id}`,
         score: Number(teamEntry?.total_score) || 0,
         timeMilliseconds: Number(teamEntry?.total_time_milliseconds) || 0,
+        description: clueGroup?.description || "",
+        motivation: clueGroup?.motivation || "",
         clues: clueGroup?.clues || [],
       });
     } catch {
@@ -375,6 +377,8 @@ function PlayerLeaderboard({ viewerToken, clearViewerToken, onReplayIntro }) {
         gameName: `Game ${endedSession.game_id}`,
         score: 0,
         timeMilliseconds: 0,
+        description: "",
+        motivation: "",
         clues: [],
       });
     }
@@ -744,6 +748,9 @@ function PlayerLeaderboard({ viewerToken, clearViewerToken, onReplayIntro }) {
               <p><strong>Clues earned:</strong> {gameEndSummary.clues.length}</p>
             </div>
 
+            {gameEndSummary.description ? <p><strong>Description:</strong> {gameEndSummary.description}</p> : null}
+            {gameEndSummary.motivation ? <p><strong>Motivation:</strong> {gameEndSummary.motivation}</p> : null}
+
             {gameEndSummary.clues.length > 0 ? (
               <ul className="game-end-clues">
                 {gameEndSummary.clues.map((clue) => (
@@ -872,13 +879,21 @@ function PlayerLeaderboard({ viewerToken, clearViewerToken, onReplayIntro }) {
             <section className="clues-section">
               {currentTeamId === null ? (
                 <p className="muted">Clues are available when logged in with a team account.</p>
-              ) : myClues.length === 0 ? (
-                <p className="muted">No clues earned yet. Submit stars from admin to unlock clues.</p>
               ) : (
                 <div className="clues-list">
                   {myClues.map((group) => (
                     <article key={group.game_id} className="clue-card">
                       <h4>{group.game_name}</h4>
+                      {group.completed && group.description ? (
+                        <p className="clue-card-subtitle"><em>{group.description}</em></p>
+                      ) : null}
+                      {group.completed && group.motivation ? <p><strong>Motivation:</strong> {group.motivation}</p> : null}
+                      {!group.completed ? (
+                        <p className="muted">Complete this game to reveal profile details.</p>
+                      ) : null}
+                      {group.clues.length === 0 ? (
+                        <p className="muted">No clues unlocked yet for this game.</p>
+                      ) : null}
                       <ul>
                         {group.clues.map((clue) => (
                           <li key={clue.id}>

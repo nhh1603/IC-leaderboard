@@ -56,3 +56,23 @@ def get_game_clues(config_key: str | None) -> list[str]:
 
     cleaned = [str(clue).strip() for clue in raw_clues if str(clue).strip()]
     return cleaned[:3]
+
+
+def get_game_metadata(config_key: str | None) -> tuple[str, str]:
+    """Read description/motivation for a game from YAML config."""
+    if not config_key:
+        return "", ""
+
+    config_file = GAMES_DIR / f"{config_key}.yaml"
+    if not config_file.exists():
+        return "", ""
+
+    try:
+        data = yaml.safe_load(config_file.read_text(encoding="utf-8")) or {}
+    except Exception:
+        return "", ""
+
+    # Keep backward compatibility with existing misspelled key in YAML files.
+    description = str(data.get("description") or data.get("desciption") or "").strip()
+    motivation = str(data.get("motivation") or "").strip()
+    return description, motivation

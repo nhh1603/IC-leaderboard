@@ -104,6 +104,9 @@ class ClueAwardResponse(BaseModel):
 class TeamClueGroupResponse(BaseModel):
     game_id: int
     game_name: str
+    completed: bool
+    description: str
+    motivation: str
     clues: list[ClueAwardResponse]
 
 

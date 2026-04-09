@@ -1,7 +1,11 @@
 name: "Team 3"
 members:
-  - "Player 1"
-  - "Player 2"
-game_orders: 1,2,3,4,5,6,7
+  - "Phạm Quốc Việt"
+  - "Vũ Gia Bảo"
+  - "Nguyễn Khánh Ly"
+  - "Đỗ Minh Phương"
+  - "Đỗ Tuấn Sơn"
+  - "Nguyễn Bắc Hải Phong"
+game_orders: 5,6,7,1,2,3,4
 username: "team_3"
 password: "DaoMai987"

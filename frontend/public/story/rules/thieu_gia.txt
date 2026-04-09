@@ -2,6 +2,8 @@
 
 Trò chơi gồm 2 vòng, xoay quanh chiếc bịt mắt
 
+**Thời lượng trò chơi: 20 phút.**
+
 ---
 
 ## VÒNG 1: BỊT MẮT BẮT BÓNG (10 phút)
@@ -94,3 +96,14 @@ Trò chơi gồm 2 vòng, xoay quanh chiếc bịt mắt
   - Thành viên không tham gia trong thời gian dài
 
 - Quản trò có toàn quyền quyết định các lỗi phát sinh
+
+---
+
+## ĐIỂM QUY ĐỔI SANG SAO
+
+> Tổng điểm của cả trò chơi sẽ được quy đổi thành số sao như sau:
+
+- **0 điểm** → **0★**
+- **1-8 điểm** → **1★**
+- **9-18 điểm** → **2★**
+- **19 điểm trở lên** → **3★**

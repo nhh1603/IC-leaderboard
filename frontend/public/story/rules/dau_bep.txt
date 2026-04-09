@@ -1,0 +1,67 @@
+# LUẬT CHƠI:
+
+Trò chơi sử dụng bộ bài 40 lá, gồm các lá màu và 4 lá tên lửa, dành cho **3-4 người chơi**.
+
+**Thời lượng trò chơi: 20 phút.**
+
+---
+
+## TỔNG QUAN CÁCH CHƠI
+
+- Mỗi lượt, tất cả người chơi lần lượt đánh ra **1 lá bài**.
+- Người có lá cao nhất theo luật của lượt sẽ **ăn lượt** (lấy toàn bộ lá bài đã đánh).
+- Khi bắt đầu mỗi ván (round), cả nhóm nhận các **nhiệm vụ** và phối hợp hoàn thành bằng bài trên tay.
+- Nhiệm vụ thường yêu cầu:
+	- Một người cụ thể phải ăn được một số lá nhất định trước khi hết ván, hoặc
+	- Hoàn thành theo đúng thứ tự yêu cầu.
+
+---
+
+## LUẬT ĐÁNH BÀI
+
+### 1. Commander
+- Ở đầu ván, người giữ **tên lửa số 4** là commander.
+- Sau đó, commander là người vừa ăn được toàn bộ bài của lượt trước.
+
+### 2. Theo màu
+- Khi commander đánh màu nào, người khác **bắt buộc** đánh cùng màu nếu trên tay còn màu đó.
+- Nếu không còn lá cùng màu, người chơi có thể đánh bất kỳ lá nào.
+
+### 3. Xác định người thắng lượt
+- Nếu **không có tên lửa**: lá số cao nhất cùng màu với người đi đầu thắng.
+- Nếu **có tên lửa**: lá tên lửa cao nhất thắng.
+
+---
+
+## CÁCH TÍNH ĐIỂM
+
+### Round 1
+- Có 3 nhiệm vụ.
+- Mỗi nhiệm vụ hoàn thành: **+1 điểm**.
+- Hoàn thành cả 3 nhiệm vụ: **+2 điểm bonus**.
+
+### Round 2
+- Có 3 nhiệm vụ theo thứ tự.
+- Mỗi nhiệm vụ hoàn thành: **+1 điểm**.
+- Hoàn thành đúng toàn bộ thứ tự: **+2 điểm bonus**.
+- Hoàn thành hết nhiệm vụ (không tính thứ tự): **+2 điểm bonus**.
+
+---
+
+## LƯU Ý GIAO TIẾP
+
+- Trong khi chơi, **không được nói** mình có lá bài gì.
+- Cách giao tiếp duy nhất:
+	- Chọn 1 lá bài màu trên tay và đặt ngửa trước mặt.
+	- Dùng 1 đồng xu đặt lên lá bài để biểu thị đó là lá **cao nhất**, **thấp nhất** hoặc **duy nhất** của màu đó.
+
+---
+
+## ĐIỂM QUY ĐỔI SANG SAO
+
+> Tổng điểm của cả trò chơi sẽ được quy đổi thành số sao như sau:
+
+- **0 điểm** → **0★**
+- **1-8 điểm** → **1★**
+- **9-20 điểm** → **2★**
+- **21 điểm trở lên** → **3★**

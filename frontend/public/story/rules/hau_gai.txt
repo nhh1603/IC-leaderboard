@@ -1,0 +1,45 @@
+# LUẬT CHƠI:
+
+Người chơi sẽ xử lý các thẻ chữ cái lộn xộn theo đúng chủ đề được giao, giống như một màn "dọn dẹp" ngôn ngữ.
+
+---
+
+## NHIỆM VỤ
+
+- Đội chơi nhận một khay chứa các thẻ chữ cái lộn xộn.
+- Mỗi vòng có 1 chủ đề bắt buộc.
+- Nhiệm vụ là sắp xếp chữ cái thành các từ có nghĩa và bám sát tuyệt đối vào chủ đề.
+
+---
+
+## THỜI GIAN
+
+- Mỗi vòng có đúng **5 phút** (tương ứng 1 chủ đề và 1 bộ thẻ riêng).
+- Khi đồng hồ đếm ngược kết thúc, người chơi phải lập tức buông tay.
+- Bất kỳ sự xê dịch thẻ nào sau khi hết giờ đều khiến từ đó bị vô hiệu hóa.
+
+---
+
+## QUY TẮC & TÍNH ĐIỂM
+
+### 1. Nguyên tắc thẻ độc lập
+- Mỗi thẻ chữ cái (vật lý) chỉ được sử dụng **1 lần duy nhất** trong mỗi vòng.
+- Ví dụ: nếu khay chỉ có 2 thẻ chữ "A", tổng số chữ "A" dùng trong tất cả từ chỉ tối đa là 2.
+- Không được dùng chung 1 thẻ cho nhiều từ.
+
+### 2. Điểm cơ bản
+- Mỗi từ ghép hoàn chỉnh, có nghĩa và đúng chủ đề được tính **1 điểm**.
+
+### 3. Bonus
+- Nếu đội sử dụng hết **100% thẻ chữ cái** trên khay để tạo thành các từ hợp lệ, đội nhận thêm **+1 điểm thưởng**.
+
+---
+
+## ĐIỂM QUY ĐỔI SANG SAO
+
+> Tổng điểm của cả trò chơi sẽ được quy đổi thành số sao như sau:
+
+- **0 điểm** → **0★**
+- **1-6 điểm** → **1★**
+- **7-15 điểm** → **2★**
+- **16 điểm trở lên** → **3★**

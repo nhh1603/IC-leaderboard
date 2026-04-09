@@ -1,5 +1,7 @@
 name: "Bác Sĩ (Cân Đá)"
+desciption: "Đang bị nạn nhân nắm bí mật về thuốc cấm"
+motivation: "Nguyệt San biết ông dùng thuốc cấm chữa cho bệnh nhân khác. Hai người đang trong thế giằng co — ông bao che bệnh tình của bà, bà giữ im lặng về thuốc của ông."
 clues:
-  - "Bác sĩ xác nhận lọ thuốc an thần của phu nhân bị đánh tráo. Thuốc bên trong vẫn là thuốc ngủ, nhưng nồng độ đã bị pha loãng, không đủ để gây chết người nhưng đủ để làm nạn nhân mê man."
-  - "Thành phát hiện bộ blouse dự phòng của mình trong phòng giặt là bị mất một chiếc khuy áo. Ông nhớ rõ là mình đã để nó ở đó từ sáng sớm."
-  - "Kết quả xét nghiệm sơ bộ: Phu nhân chết vì ngạt khí do phản ứng hóa học giữa tinh dầu hoa nồng độ cao và chất giãn cơ trong trà. Một cái chết êm ái nhưng cực kỳ tinh vi."
+  - '"Từ 17:00 đến 18:00 tôi ở Phòng Khám."  —  17:45 không ai nhấc máy khi Quản gia gọi đến. Lúc 18:25, đang đi dọc hành lang Tầng 2, ông thoáng thấy một bóng tối lướt nhanh từ hướng phòng phu nhân — nghĩ là nhân viên bình thường nên không để ý.'
+  - '"19:00 vào kiểm tra thấy nạn nhân hôn mê. 19:10 quay lại thì bà đã mất."  —  10 phút đó ông ở lại một mình với nạn nhân trước khi tuyên bố tử vong.'
+  - Thuốc gây mê liều cao (danh mục cấm) trong tủ mất một nửa so với hôm qua — ổ khóa không bị phá nhưng có vết xước mới. Ống tiêm rỗng dưới gầm tủ không có vân tay của ông.

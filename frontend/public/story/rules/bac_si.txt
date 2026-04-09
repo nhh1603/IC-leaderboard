@@ -1,0 +1,63 @@
+# LUẬT CHƠI:
+
+Mục tiêu của đội là đưa **cân chính** về trạng thái cân bằng bằng cách đặt các viên đá lên cân, đồng thời xác định chính xác khối lượng các loại đá.
+
+**Thời lượng trò chơi: 20 phút.**
+
+---
+
+## CÁCH CHIA NHÓM
+
+- Đội được chia thành **3 nhóm nhỏ**.
+- Các nhóm **không được trao đổi** với nhau.
+- Thành viên trong cùng nhóm được phép thảo luận.
+- Cả 3 nhóm cùng sử dụng **2 chiếc cân** để thực hiện phép cân thông qua quản trò.
+
+---
+
+## CÁCH CHƠI
+
+### 1. Tài nguyên ban đầu
+- Mỗi người chơi nhận **5 viên đá của mỗi loại**.
+
+### 2. Lượt chơi
+- Mỗi lượt, chỉ **1 người chơi** được đặt đá.
+- Tối đa **2 viên đá** được đặt lên bất kỳ vị trí nào trên 2 chiếc cân.
+- Thứ tự người chơi mỗi lượt do quản trò quyết định.
+
+### 3. Thông tin ban đầu từ quản trò
+- Quản trò cho biết:
+	- Khối lượng của **1 viên đá mẫu**.
+	- Thứ tự nặng nhẹ của viên mẫu trong 4 loại đá.
+
+### 4. Quy tắc đặt đá
+- Hai bên đĩa cân **không được có cùng một tổ hợp đá**.
+- Đá đã đặt lên cân **không được lấy lại**.
+
+### 5. Quy tắc đoán đáp án
+- Mỗi thành viên có thể đoán toàn bộ khối lượng các loại đá vào bất kỳ thời điểm nào.
+- Mỗi thành viên chỉ được đoán **1 lần duy nhất**.
+
+### 6. Thảo luận liên nhóm
+- Mỗi đội được yêu cầu thảo luận liên nhóm trong **30 giây**.
+- Khi muốn yêu cầu, nhóm lắc chuông và quản trò bắt đầu tính thời gian.
+
+---
+
+## ĐIỀU KIỆN CHIẾN THẮNG
+
+Đội chiến thắng khi đồng thời đạt cả 2 điều kiện:
+
+- **Cân chính** trở về trạng thái cân bằng.
+- Đoán đúng toàn bộ khối lượng các viên đá.
+
+---
+
+## ĐIỂM QUY ĐỔI SANG SAO
+
+> Kết quả cuối cùng được quy đổi thành số sao như sau:
+
+- **0★**: không tìm ra được khối lượng của 3 viên đá và cân chính cuối cùng không cân bằng.
+- **1★**: xác định được khối lượng ít nhất 1-2 viên đá trong 3 viên đá.
+- **2★**: xác định được khối lượng của cả 3 viên đá nhưng cân không cân bằng.
+- **3★**: xác định được khối lượng của cả 3 viên đá và cân đạt trạng thái cân bằng.

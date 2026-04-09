@@ -1,7 +1,12 @@
 name: "Team 5"
 members:
-  - "Player 1"
-  - "Player 2"
-game_orders: 1,2,3,4,5,6,7
+  - "Phạm Thành Nguyên"
+  - "Trần Thảo Vân"
+  - "Trần Hữu Tùng Dương"
+  - "Hồ Minh Trí"
+  - "Hồ Thị Ngọc Ánh"
+  - "Hồ Chí Kiên"
+  - "Nguyễn Lê Huy"
+game_orders: 7,1,2,3,4,5,6
 username: "team_5"
 password: "LuaNuoc963"

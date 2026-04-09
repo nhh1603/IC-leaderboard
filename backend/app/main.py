@@ -13,7 +13,7 @@ from app.auth import create_token, hash_password, require_admin, require_token, 
 from app.config import settings
 from app.database import Base, SessionLocal, engine, get_db
 from app.game_loader import load_games_from_config
-from app.game_loader import get_game_clues
+from app.game_loader import get_game_clues, get_game_metadata
 from app.team_loader import load_team_game_orders_from_config, load_teams_from_config, normalize_username
 from app.leaderboard import get_leaderboard
 from app.models import ClueAward, Game, GameSession, PerpetratorPortal, PerpetratorSubmission, Player, ScoreEvent, Team, TimerRound
@@ -824,34 +824,48 @@ def get_my_clues(
         .order_by(ClueAward.game_id.asc(), ClueAward.clue_order.asc(), ClueAward.created_at.asc())
     ).all()
 
-    game_name_by_id = {
-        game.id: game.name
-        for game in db.scalars(select(Game).order_by(Game.id.asc())).all()
+    games = db.scalars(select(Game).order_by(Game.id.asc())).all()
+    completed_game_ids = {
+        row.game_id
+        for row in db.scalars(
+            select(ScoreEvent)
+            .where(ScoreEvent.team_id == team.id)
+            .order_by(ScoreEvent.game_id.asc())
+        ).all()
     }
-
-    grouped: dict[int, TeamClueGroupResponse] = {}
+    game_awards: dict[int, list[ClueAward]] = {}
     for row in rows:
-        game_name = game_name_by_id.get(row.game_id, f"Game {row.game_id}")
-        if row.game_id not in grouped:
-            grouped[row.game_id] = TeamClueGroupResponse(
-                game_id=row.game_id,
-                game_name=game_name,
-                clues=[],
-            )
+        game_awards.setdefault(row.game_id, []).append(row)
 
-        grouped[row.game_id].clues.append(
-            ClueAwardResponse(
-                id=row.id,
-                team_id=row.team_id,
-                game_id=row.game_id,
-                game_name=game_name,
-                clue_order=row.clue_order,
-                clue_text=row.clue_text,
-                created_at=row.created_at,
+    grouped: list[TeamClueGroupResponse] = []
+    for game in games:
+        if game.id not in completed_game_ids:
+            continue
+        description, motivation = get_game_metadata(game.config_key)
+        awards = game_awards.get(game.id, [])
+        grouped.append(
+            TeamClueGroupResponse(
+                game_id=game.id,
+                game_name=game.name,
+                completed=game.id in completed_game_ids,
+                description=description,
+                motivation=motivation,
+                clues=[
+                    ClueAwardResponse(
+                        id=row.id,
+                        team_id=row.team_id,
+                        game_id=row.game_id,
+                        game_name=game.name,
+                        clue_order=row.clue_order,
+                        clue_text=row.clue_text,
+                        created_at=row.created_at,
+                    )
+                    for row in awards
+                ],
             )
         )
 
-    return list(grouped.values())
+    return grouped
 
 
 @app.get("/perpetrator/portal", response_model=PerpetratorPortalResponse)

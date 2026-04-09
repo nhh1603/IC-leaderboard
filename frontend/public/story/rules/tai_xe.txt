@@ -1,0 +1,60 @@
+# LUẬT CHƠI:
+
+Trò chơi yêu cầu đội phối hợp xây đường trong mê cung để đưa quân từ điểm xuất phát đến đích.
+
+**Thời lượng trò chơi: 20 phút.**
+
+---
+
+## VẬT DỤNG HỖ TRỢ
+
+- **Bản đồ mê cung:** gồm điểm xuất phát (**tốt Trắng**) và điểm đích (**tốt Đỏ**).
+- **Bộ bài mê cung:** gồm lá xây đường và 6 loại lá hiệu ứng đặc biệt.
+
+### Chi tiết lá hiệu ứng
+
+Trong lượt chơi, nếu dùng lá hiệu ứng, người chơi được thực hiện các quyền năng sau:
+
+- **Lá Cầu Vượt:** đặt một đoạn đường đè lên chướng ngại vật trên bản đồ (trừ tường biên).
+- **Lá Động Đất:** loại bỏ 1 lá xây đường đã đặt trên bản đồ và đưa vào xấp bài rác.
+- **Lá Dịch Chuyển:** di chuyển 1 đoạn đường đã đặt sang một vị trí trống hợp lệ khác.
+- **Lá Sửa Chữa:** lấy lại 1 lá xây đường từ xấp bài rác lên tay.
+- **Lá Ống Nhòm:** rút 3 lá từ bộ bài chung, chọn 1 lá lấy lên tay, 2 lá còn lại đặt dưới đáy bộ bài.
+- **Lá Bản Đồ Phụ:** xem trước 3 lá đầu tiên của bộ bài chung để lập kế hoạch.
+
+---
+
+## CÁCH CHƠI
+
+- Mỗi người chơi giữ **5 lá bài**.
+- Trong lượt của mình, người chơi chọn **1 trong 2 hành động**:
+
+### 1. Hành động chơi bài
+- **Đánh lá xây đường:** nối tiếp đoạn đường trước đó, không xuyên qua vật cản (trừ khi dùng lá Cầu Vượt).
+- **Đánh lá hiệu ứng:** thực hiện kỹ năng tương ứng của lá bài.
+- Sau khi chơi bài, rút **1 lá mới** từ xấp bài chung.
+
+### 2. Hành động đổi bài
+- Bỏ 1 lá bài trên tay vào xấp bài rác.
+- Rút 1 lá mới để duy trì đủ 5 lá.
+
+---
+
+## ĐIỀU KIỆN KẾT THÚC
+
+- **Thắng:** tạo được đường đi thông suốt từ tốt Trắng đến tốt Đỏ.
+- **Thua:** bộ bài chung hết bài nhưng chưa kết nối được đến đích.
+
+### Quy tắc bắt buộc
+- Đoạn đường sau phải nối tiếp điểm kết thúc của đoạn đường trước.
+
+---
+
+## ĐIỂM QUY ĐỔI SANG SAO
+
+> Kết quả cuối cùng được quy đổi thành số sao như sau:
+
+- **0 điểm** → **0★**: không nối được quá nửa quãng đường.
+- **1-8 điểm** → **1★**: nối được hơn nửa quãng đường nhưng chưa tới đích.
+- **9-18 điểm** → **2★**: chạm đích khi bộ bài chung còn dưới 5 lá.
+- **19 điểm trở lên** → **3★**: chạm đích nhanh chóng khi bộ bài chung còn trên 10 lá.

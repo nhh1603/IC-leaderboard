@@ -1,0 +1,26 @@
+# LUẬT CHƠI:
+
+Các thành viên trong mỗi đội phối hợp chuyền bóng để đưa bóng vào đúng mục tiêu trên mặt đất.
+
+**Thời lượng trò chơi: 20 phút.**
+
+---
+
+## CÁCH CHƠI
+
+- Mục tiêu là đưa bóng vào các vòng nằm trên mặt đất.
+- Vòng càng xa thì số điểm nhận được càng cao.
+- Trong mỗi lượt chơi, mỗi thành viên chỉ được chạm bóng **1 lần**.
+- Nếu bóng rơi xuống đất, cả đội phải thực hiện lại từ đầu.
+- Trò chơi diễn ra qua nhiều lượt và tổng số lần đưa bóng trúng đích được quy đổi thành điểm.
+
+---
+
+## ĐIỂM QUY ĐỔI SANG SAO
+
+> Kết quả cuối cùng được quy đổi thành số sao như sau:
+
+- **Dưới 20 lần trúng đích** → **0★**
+- **20-30 lần trúng đích** → **1★**
+- **30-40 lần trúng đích** → **2★**
+- **Trên 40 lần trúng đích** → **3★**

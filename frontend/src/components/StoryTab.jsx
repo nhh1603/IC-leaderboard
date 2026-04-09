@@ -73,7 +73,7 @@ export default function StoryTab({
     const loadStories = async () => {
       try {
         const stories = [];
-        for (let i = 1; i <= 4; i++) {
+        for (let i = 1; i <= 6; i++) {
           const response = await fetch(`/story/${i}.txt`);
           if (response.ok) {
             const text = await response.text();
@@ -342,10 +342,10 @@ export default function StoryTab({
                 <ReactMarkdown>{storyText}</ReactMarkdown>
               </div>
 
-              {/* Game stories section: appears in episode 4 only, and keeps unlocked games forever. */}
-              {selectedStoryNum === 4 && unlockedGames.length > 0 && (
+              {/* Game stories section: appears in episode 6 (Các nghi phạm) only. */}
+              {selectedStoryNum === 6 && unlockedGames.length > 0 && (
                 <div className="game-stories-section">
-                  <h4>Các vụ án</h4>
+                  <h4>Các nghi phạm</h4>
                   <div className="game-story-tabs">
                     {unlockedGames.map((game) => (
                       <button
