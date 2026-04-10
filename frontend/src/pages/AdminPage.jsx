@@ -904,7 +904,9 @@ export default function AdminPage({ adminToken, setAdminToken, loginOnly = false
                         ) : (
                           leaderboardEntries.flatMap((entry, index) => {
                             const isExpanded = expandedLeaderboardTeams.has(entry.team_id);
-                            const members = playersByTeam[entry.team_id] || [];
+                            const members = (playersByTeam[entry.team_id] || [])
+                              .map((player) => (typeof player === "string" ? player : player?.name || ""))
+                              .filter(Boolean);
                             const rounds = entry.time_rounds || [];
 
                             return [
@@ -937,7 +939,7 @@ export default function AdminPage({ adminToken, setAdminToken, loginOnly = false
                                       <span className="muted">No players</span>
                                     ) : (
                                       <ul className="player-list">
-                                        {members.map((name) => <li key={name}>{name}</li>)}
+                                        {members.map((name, memberIndex) => <li key={`${entry.team_id}-${name}-${memberIndex}`}>{name}</li>)}
                                       </ul>
                                     )}
 
