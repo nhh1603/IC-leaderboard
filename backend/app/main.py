@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+from datetime import datetime, timezone
 from pathlib import Path
 import random
 from urllib.parse import quote
@@ -110,6 +111,31 @@ def ensure_team_auth_schema() -> None:
         connection.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_teams_username_unique ON teams (username)"))
         connection.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_teams_config_key_unique ON teams (config_key)"))
 
+
+def ensure_perpetrator_schema() -> None:
+    inspector = inspect(engine)
+
+    if inspector.has_table("perpetrator_portal"):
+        portal_columns = {column["name"] for column in inspector.get_columns("perpetrator_portal")}
+        with engine.begin() as connection:
+            if "is_open" not in portal_columns:
+                connection.execute(text("ALTER TABLE perpetrator_portal ADD COLUMN is_open BOOLEAN DEFAULT FALSE"))
+            if "updated_at" not in portal_columns:
+                connection.execute(text("ALTER TABLE perpetrator_portal ADD COLUMN updated_at TIMESTAMP"))
+
+    if inspector.has_table("perpetrator_submissions"):
+        submission_columns = {column["name"] for column in inspector.get_columns("perpetrator_submissions")}
+        with engine.begin() as connection:
+            if "perpetrator_name" not in submission_columns:
+                connection.execute(text("ALTER TABLE perpetrator_submissions ADD COLUMN perpetrator_name VARCHAR(120)"))
+            if "image_path" not in submission_columns:
+                connection.execute(text("ALTER TABLE perpetrator_submissions ADD COLUMN image_path VARCHAR(255)"))
+            if "created_at" not in submission_columns:
+                connection.execute(text("ALTER TABLE perpetrator_submissions ADD COLUMN created_at TIMESTAMP"))
+            connection.execute(
+                text("CREATE INDEX IF NOT EXISTS ix_perpetrator_submissions_created_at ON perpetrator_submissions (created_at)")
+            )
+
 origins = [origin.strip() for origin in settings.cors_origins.split(",") if origin.strip()]
 app.add_middleware(
     CORSMiddleware,
@@ -125,6 +151,7 @@ app.add_middleware(
 def startup() -> None:
     Base.metadata.create_all(bind=engine)
     ensure_team_auth_schema()
+    ensure_perpetrator_schema()
     with SessionLocal() as db:
         load_games_from_config(db)
         load_teams_from_config(db)
@@ -175,13 +202,14 @@ def get_or_create_perpetrator_portal(db: Session) -> PerpetratorPortal:
 
 
 def serialize_perpetrator_submission(item: PerpetratorSubmission, team_name: str) -> PerpetratorSubmissionResponse:
+    created_at = item.created_at or datetime.now(timezone.utc)
     return PerpetratorSubmissionResponse(
         id=item.id,
         team_id=item.team_id,
         team_name=team_name,
         perpetrator_name=item.perpetrator_name,
         image_path=item.image_path,
-        created_at=item.created_at,
+        created_at=created_at,
     )
 
 
