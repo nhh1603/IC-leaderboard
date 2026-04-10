@@ -136,6 +136,25 @@ def ensure_perpetrator_schema() -> None:
                 text("CREATE INDEX IF NOT EXISTS ix_perpetrator_submissions_created_at ON perpetrator_submissions (created_at)")
             )
 
+
+def ensure_game_session_schema() -> None:
+    inspector = inspect(engine)
+    if not inspector.has_table("game_sessions"):
+        return
+
+    session_columns = {column["name"] for column in inspector.get_columns("game_sessions")}
+    with engine.begin() as connection:
+        if "is_active" not in session_columns:
+            connection.execute(text("ALTER TABLE game_sessions ADD COLUMN is_active BOOLEAN DEFAULT FALSE"))
+        if "started_at" not in session_columns:
+            connection.execute(text("ALTER TABLE game_sessions ADD COLUMN started_at TIMESTAMP"))
+        if "ended_at" not in session_columns:
+            connection.execute(text("ALTER TABLE game_sessions ADD COLUMN ended_at TIMESTAMP"))
+
+        # Backfill nullable legacy rows so response validation cannot fail.
+        connection.execute(text("UPDATE game_sessions SET started_at = CURRENT_TIMESTAMP WHERE started_at IS NULL"))
+        connection.execute(text("UPDATE game_sessions SET is_active = FALSE WHERE is_active IS NULL"))
+
 origins = [origin.strip() for origin in settings.cors_origins.split(",") if origin.strip()]
 app.add_middleware(
     CORSMiddleware,
@@ -152,6 +171,7 @@ def startup() -> None:
     Base.metadata.create_all(bind=engine)
     ensure_team_auth_schema()
     ensure_perpetrator_schema()
+    ensure_game_session_schema()
     with SessionLocal() as db:
         load_games_from_config(db)
         load_teams_from_config(db)
@@ -210,6 +230,18 @@ def serialize_perpetrator_submission(item: PerpetratorSubmission, team_name: str
         perpetrator_name=item.perpetrator_name,
         image_path=item.image_path,
         created_at=created_at,
+    )
+
+
+def serialize_game_session(session: GameSession) -> GameSessionResponse:
+    started_at = session.started_at or datetime.now(timezone.utc)
+    return GameSessionResponse(
+        id=session.id,
+        team_id=session.team_id,
+        game_id=session.game_id,
+        is_active=bool(session.is_active),
+        started_at=started_at,
+        ended_at=session.ended_at,
     )
 
 
@@ -728,7 +760,7 @@ async def start_game_session(
     payload: GameSessionStartRequest,
     _: str = Depends(require_admin),
     db: Session = Depends(get_db),
-) -> GameSession:
+) -> GameSessionResponse:
     team = db.get(Team, payload.team_id)
     if team is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
@@ -747,7 +779,7 @@ async def start_game_session(
 
     if active_for_team is not None:
         if active_for_team.game_id == payload.game_id:
-            return active_for_team
+            return serialize_game_session(active_for_team)
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="This team already has an active game session",
@@ -773,7 +805,7 @@ async def start_game_session(
     leaderboard = get_leaderboard(db)
     await leaderboard_connections.broadcast_json(leaderboard.model_dump(mode="json"))
 
-    return session
+    return serialize_game_session(session)
 
 
 @app.post("/games/sessions/{session_id}/end", response_model=GameSessionResponse)
@@ -781,7 +813,7 @@ async def end_game_session(
     session_id: int,
     _: str = Depends(require_admin),
     db: Session = Depends(get_db),
-) -> GameSession:
+) -> GameSessionResponse:
     session = db.get(GameSession, session_id)
     if session is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
@@ -794,7 +826,7 @@ async def end_game_session(
     leaderboard = get_leaderboard(db)
     await leaderboard_connections.broadcast_json(leaderboard.model_dump(mode="json"))
 
-    return session
+    return serialize_game_session(session)
 
 
 @app.get("/games/sessions/team/{team_id}", response_model=GameSessionResponse | None)
@@ -802,14 +834,14 @@ def get_team_active_session(
     team_id: int,
     _: tuple[str, str] = Depends(require_token),
     db: Session = Depends(get_db),
-) -> GameSession | None:
+) -> GameSessionResponse | None:
     session = db.scalars(
         select(GameSession).where(
             GameSession.team_id == team_id,
             GameSession.is_active == True,
         )
     ).first()
-    return session if session else None
+    return serialize_game_session(session) if session else None
 
 
 @app.get("/games/sessions/team/{team_id}/started", response_model=list[GameSessionResponse])
@@ -817,13 +849,13 @@ def get_team_started_sessions(
     team_id: int,
     _: tuple[str, str] = Depends(require_token),
     db: Session = Depends(get_db),
-) -> list[GameSession]:
+) -> list[GameSessionResponse]:
     rows = db.scalars(
         select(GameSession)
         .where(GameSession.team_id == team_id)
         .order_by(GameSession.started_at.asc(), GameSession.id.asc())
     ).all()
-    return list(rows)
+    return [serialize_game_session(row) for row in rows]
 
 
 @app.get("/leaderboard", response_model=LeaderboardResponse)
@@ -903,8 +935,12 @@ def get_perpetrator_portal(
     db: Session = Depends(get_db),
 ) -> PerpetratorPortalResponse:
     portal = get_or_create_perpetrator_portal(db)
-    options = [PerpetratorOptionResponse(**option) for option in list_perpetrator_options()]
-    return PerpetratorPortalResponse(is_open=portal.is_open, updated_at=portal.updated_at, options=options)
+    options = [
+        PerpetratorOptionResponse(name=str(option.get("name") or ""), image_path=option.get("image_path"))
+        for option in list_perpetrator_options()
+    ]
+    updated_at = portal.updated_at or datetime.now(timezone.utc)
+    return PerpetratorPortalResponse(is_open=portal.is_open, updated_at=updated_at, options=options)
 
 
 @app.put("/perpetrator/portal", response_model=PerpetratorPortalResponse)
@@ -918,8 +954,12 @@ def update_perpetrator_portal(
     db.commit()
     db.refresh(portal)
 
-    options = [PerpetratorOptionResponse(**option) for option in list_perpetrator_options()]
-    return PerpetratorPortalResponse(is_open=portal.is_open, updated_at=portal.updated_at, options=options)
+    options = [
+        PerpetratorOptionResponse(name=str(option.get("name") or ""), image_path=option.get("image_path"))
+        for option in list_perpetrator_options()
+    ]
+    updated_at = portal.updated_at or datetime.now(timezone.utc)
+    return PerpetratorPortalResponse(is_open=portal.is_open, updated_at=updated_at, options=options)
 
 
 @app.post("/perpetrator/submissions", response_model=PerpetratorSubmissionResponse)
