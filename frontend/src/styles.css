@@ -1465,6 +1465,14 @@ svg {
 }
 
 @media (max-width: 860px) {
+  input,
+  textarea,
+  select,
+  .auth-panel input,
+  .team-name-modal input {
+    font-size: 16px;
+  }
+
   .player-panel {
     padding-top: 72px;
   }
