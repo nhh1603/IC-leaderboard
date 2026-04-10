@@ -1,6 +1,6 @@
 # LUẬT CHƠI:
 
-Trò chơi sử dụng bộ bài 40 lá, gồm các lá màu và 4 lá tên lửa, dành cho **3-4 người chơi**.
+Trò chơi sử dụng bộ bài 40 lá, gồm **4 màu x 9 lá** và **4 lá tên lửa**, dành cho **3-4 người chơi**.
 
 **Thời lượng trò chơi: 20 phút.**
 
@@ -14,6 +14,7 @@ Trò chơi sử dụng bộ bài 40 lá, gồm các lá màu và 4 lá tên lử
 - Nhiệm vụ thường yêu cầu:
 	- Một người cụ thể phải ăn được một số lá nhất định trước khi hết ván, hoặc
 	- Hoàn thành theo đúng thứ tự yêu cầu.
+- Mục tiêu tổng thể: phối hợp để đầu bếp "nấu ra chứng cứ".
 
 ---
 
@@ -36,12 +37,12 @@ Trò chơi sử dụng bộ bài 40 lá, gồm các lá màu và 4 lá tên lử
 ## CÁCH TÍNH ĐIỂM
 
 ### Round 1
-- Có 3 nhiệm vụ.
+- Có 4 nhiệm vụ.
 - Mỗi nhiệm vụ hoàn thành: **+1 điểm**.
-- Hoàn thành cả 3 nhiệm vụ: **+2 điểm bonus**.
+- Hoàn thành cả 4 nhiệm vụ: **+2 điểm bonus**.
 
 ### Round 2
-- Có 3 nhiệm vụ theo thứ tự.
+- Có 4 nhiệm vụ theo thứ tự.
 - Mỗi nhiệm vụ hoàn thành: **+1 điểm**.
 - Hoàn thành đúng toàn bộ thứ tự: **+2 điểm bonus**.
 - Hoàn thành hết nhiệm vụ (không tính thứ tự): **+2 điểm bonus**.
@@ -64,4 +65,4 @@ Trò chơi sử dụng bộ bài 40 lá, gồm các lá màu và 4 lá tên lử
 - **0 điểm** → **0★**
 - **1-8 điểm** → **1★**
 - **9-20 điểm** → **2★**
-- **21 điểm trở lên** → **3★**
+- **21+ điểm** → **3★**

@@ -1,6 +1,8 @@
 # LUẬT CHƠI:
 
-Trò chơi yêu cầu đội phối hợp xây đường trong mê cung để đưa quân từ điểm xuất phát đến đích.
+Giữa những lối đi chồng chéo, chỉ có kẻ làm chủ được các "quy luật biến dạng" mới có thể tìm thấy lối thoát.
+
+Bạn sẽ xây dựng con đường hay sẽ phá hủy nó để kiến tạo một sự thật mới?
 
 **Thời lượng trò chơi: 20 phút.**
 
@@ -16,27 +18,27 @@ Trò chơi yêu cầu đội phối hợp xây đường trong mê cung để đ
 Trong lượt chơi, nếu dùng lá hiệu ứng, người chơi được thực hiện các quyền năng sau:
 
 - **Lá Cầu Vượt:** đặt một đoạn đường đè lên chướng ngại vật trên bản đồ (trừ tường biên).
-- **Lá Động Đất:** loại bỏ 1 lá xây đường đã đặt trên bản đồ và đưa vào xấp bài rác.
+- **Lá Động Đất:** bắt buộc loại bỏ 1 lá xây đường gần nhất đã đặt trên bản đồ và đưa vào xấp bài rác.
 - **Lá Dịch Chuyển:** di chuyển 1 đoạn đường đã đặt sang một vị trí trống hợp lệ khác.
-- **Lá Sửa Chữa:** lấy lại 1 lá xây đường từ xấp bài rác lên tay.
-- **Lá Ống Nhòm:** rút 3 lá từ bộ bài chung, chọn 1 lá lấy lên tay, 2 lá còn lại đặt dưới đáy bộ bài.
-- **Lá Bản Đồ Phụ:** xem trước 3 lá đầu tiên của bộ bài chung để lập kế hoạch.
+- **Lá Bẫy:** bắt buộc đặt 1 chướng ngại vật xung quanh người chơi.
+- **Lá Sửa Chữa:** đưa lại lên tay 1 lá trong chồng bài hủy của người chơi (lá đã chơi hoặc đã loại bỏ). Lá bài này sau khi sử dụng lại sẽ bị vĩnh viễn loại bỏ (không thể sử dụng lá Sửa Chữa để đưa lại lên tay).
 
 ---
 
 ## CÁCH CHƠI
 
-- Mỗi người chơi giữ **5 lá bài**.
-- Trong lượt của mình, người chơi chọn **1 trong 2 hành động**:
+- Mỗi người chơi bắt đầu với tay trắng (**không có lá nào**).
+- Trong lượt của mình, người chơi thực hiện theo thứ tự:
 
-### 1. Hành động chơi bài
+### 1. Bốc bài
+- Bốc **1 lá bài** từ bộ bài.
+
+### 2. Chơi bài (không bắt buộc)
 - **Đánh lá xây đường:** nối tiếp đoạn đường trước đó, không xuyên qua vật cản (trừ khi dùng lá Cầu Vượt).
-- **Đánh lá hiệu ứng:** thực hiện kỹ năng tương ứng của lá bài.
-- Sau khi chơi bài, rút **1 lá mới** từ xấp bài chung.
+- **Đánh lá hiệu ứng:** thực hiện kỹ năng của lá bài đó.
 
-### 2. Hành động đổi bài
-- Bỏ 1 lá bài trên tay vào xấp bài rác.
-- Rút 1 lá mới để duy trì đủ 5 lá.
+### 3. Hủy bài
+- Nếu trên tay có nhiều hơn **2 lá**, người chơi bắt buộc hủy 1 hoặc nhiều lá để chỉ giữ tối đa **2 lá**.
 
 ---
 
@@ -57,4 +59,4 @@ Trong lượt chơi, nếu dùng lá hiệu ứng, người chơi được thự
 - **0 điểm** → **0★**: không nối được quá nửa quãng đường.
 - **1-8 điểm** → **1★**: nối được hơn nửa quãng đường nhưng chưa tới đích.
 - **9-18 điểm** → **2★**: chạm đích khi bộ bài chung còn dưới 5 lá.
-- **19 điểm trở lên** → **3★**: chạm đích nhanh chóng khi bộ bài chung còn trên 10 lá.
+- **19+ điểm** → **3★**: chạm đích nhanh chóng khi bộ bài chung còn trên 10 lá.
