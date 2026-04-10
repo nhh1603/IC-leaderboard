@@ -12,6 +12,7 @@ import {
   fetchPlayers,
   fetchTimerRounds,
   fetchTeams,
+  getTeamActiveSession,
   getTeamStartedSessions,
   getCurrentUser,
   login,
@@ -178,6 +179,24 @@ export default function AdminPage({ adminToken, setAdminToken, loginOnly = false
     }
   };
 
+  const loadSelectedTeamActiveSession = async () => {
+    if (!adminToken || !selectedTeamId) {
+      setActiveGameSession(null);
+      return;
+    }
+
+    try {
+      const session = await getTeamActiveSession(adminToken, selectedTeamId);
+      setActiveGameSession(session || null);
+      if (session?.game_id) {
+        setSelectedGameId(String(session.game_id));
+      }
+    } catch (err) {
+      setActiveGameSession(null);
+      setErrorText(err.message || "Unable to load active game session");
+    }
+  };
+
   useEffect(() => {
     if (!adminToken) return;
     loadPerpetratorData();
@@ -185,6 +204,18 @@ export default function AdminPage({ adminToken, setAdminToken, loginOnly = false
     const intervalId = window.setInterval(loadPerpetratorData, 5000);
     return () => window.clearInterval(intervalId);
   }, [adminToken]);
+
+  useEffect(() => {
+    loadSelectedTeamActiveSession();
+  }, [adminToken, selectedTeamId]);
+
+  useEffect(() => {
+    if (!adminToken || !selectedTeamId) return undefined;
+    const intervalId = window.setInterval(() => {
+      loadSelectedTeamActiveSession();
+    }, 4000);
+    return () => window.clearInterval(intervalId);
+  }, [adminToken, selectedTeamId]);
 
   useEffect(() => {
     const games = leaderboardData?.games || [];
@@ -309,6 +340,7 @@ export default function AdminPage({ adminToken, setAdminToken, loginOnly = false
       setStatusText("Score submitted");
       // Game session will be ended automatically by the backend
       setActiveGameSession(null);
+      await loadSelectedTeamActiveSession();
       loadLeaderboard();
       refreshCompletionMatrix();
     } catch (err) {
@@ -337,6 +369,7 @@ export default function AdminPage({ adminToken, setAdminToken, loginOnly = false
     try {
       await endGameSession(adminToken, activeGameSession.id);
       setActiveGameSession(null);
+      await loadSelectedTeamActiveSession();
       setStatusText("Game ended");
       refreshCompletionMatrix();
     } catch (err) {
@@ -441,6 +474,14 @@ export default function AdminPage({ adminToken, setAdminToken, loginOnly = false
   }, [selectedTeamId, selectedGameId]);
 
   const timerDisplay = timerRunning ? liveElapsed : stoppedElapsed;
+  const isSelectedTeamPlaying = Boolean(
+    activeGameSession && String(activeGameSession.team_id) === String(selectedTeamId)
+  );
+
+  const activeGameNameForSelectedTeam = isSelectedTeamPlaying
+    ? (games.find((g) => String(g.id) === String(activeGameSession.game_id))?.name || "Unknown game")
+    : "";
+
   const canSubmitForSelection = Boolean(
     activeGameSession
       && String(activeGameSession.team_id) === String(selectedTeamId)
@@ -629,7 +670,12 @@ export default function AdminPage({ adminToken, setAdminToken, loginOnly = false
                     </label>
                     <label>
                       Game
-                      <select value={selectedGameId} onChange={(e) => setSelectedGameId(e.target.value)} required>
+                      <select
+                        value={selectedGameId}
+                        onChange={(e) => setSelectedGameId(e.target.value)}
+                        required
+                        disabled={isSelectedTeamPlaying}
+                      >
                         <option value="">- select game -</option>
                         {games.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
                       </select>
@@ -637,18 +683,24 @@ export default function AdminPage({ adminToken, setAdminToken, loginOnly = false
                     <button
                       type="button"
                       onClick={handleStartGame}
-                      disabled={!selectedGameId || !selectedTeamId || Boolean(activeGameSession)}
-                      className={activeGameSession ? "compact" : ""}
+                      disabled={!selectedGameId || !selectedTeamId || isSelectedTeamPlaying}
+                      className={isSelectedTeamPlaying ? "compact" : ""}
                     >
-                      {activeGameSession ? "✓ Game started" : "Start game"}
+                      {isSelectedTeamPlaying ? "✓ Game started" : "Start game"}
                     </button>
                   </div>
 
-                  {activeGameSession && (
+                  {isSelectedTeamPlaying && (
                     <p className="success-text" style={{ marginBottom: "12px" }}>
-                      Active: {teams.find(t => t.id === parseInt(selectedTeamId))?.name} - {games.find(g => g.id === parseInt(selectedGameId))?.name}
+                      Active: {teams.find((t) => String(t.id) === String(selectedTeamId))?.name || "-"} - {activeGameNameForSelectedTeam}
                     </p>
                   )}
+
+                  {!isSelectedTeamPlaying && selectedTeamId ? (
+                    <p className="muted" style={{ marginBottom: "12px" }}>
+                      This team is not currently playing. Choose a game, then click Start game.
+                    </p>
+                  ) : null}
                 </section>
 
                 <section className="score-section-block">
