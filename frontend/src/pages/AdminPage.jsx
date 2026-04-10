@@ -35,6 +35,13 @@ function formatDateTime(iso) {
   return new Date(iso).toLocaleString();
 }
 
+function shouldSuppressTransientError(message) {
+  if (!message) return false;
+  return /(failed to fetch|networkerror|load failed|net::err_failed|cors|bad gateway|gateway timeout|fetch failed)/i.test(
+    String(message)
+  );
+}
+
 const TOTAL_TAB_ID = "__total__";
 
 export default function AdminPage({ adminToken, setAdminToken, loginOnly = false, onReplayIntro }) {
@@ -524,6 +531,7 @@ export default function AdminPage({ adminToken, setAdminToken, loginOnly = false
   const leaderboardEntries = activeLeaderboardGameId === TOTAL_TAB_ID
     ? totalLeaderboardEntries
     : (activeLeaderboardGame?.entries ?? []);
+  const visibleErrorText = shouldSuppressTransientError(errorText) ? "" : errorText;
 
   return (
     <section className="panel admin-panel">
@@ -965,7 +973,7 @@ export default function AdminPage({ adminToken, setAdminToken, loginOnly = false
       )}
 
       {statusText ? <p className="success-text">{statusText}</p> : null}
-      {errorText ? <p className="error-text">{errorText}</p> : null}
+      {visibleErrorText ? <p className="error-text">{visibleErrorText}</p> : null}
     </section>
   );
 }
