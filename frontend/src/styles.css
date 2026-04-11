@@ -1584,6 +1584,21 @@ svg {
     background: rgba(33, 16, 22, 0.34);
     border: none;
   }
+
+  .admin-panel .score-section-block .form-grid {
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .admin-panel .score-section-block .form-grid > * {
+    min-width: 0;
+  }
+
+  .admin-panel .score-section-block select,
+  .admin-panel .score-section-block button {
+    width: 100%;
+    max-width: 100%;
+  }
 }
 
 .team-toggle {

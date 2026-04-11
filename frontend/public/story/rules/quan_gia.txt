@@ -20,7 +20,7 @@ Các thành viên trong mỗi đội phối hợp chuyền bóng để đưa bó
 
 > Kết quả cuối cùng được quy đổi thành số sao như sau:
 
-- **Dưới 20 lần trúng đích** → **0★**
-- **20-30 lần trúng đích** → **1★**
-- **30-40 lần trúng đích** → **2★**
-- **Trên 40 lần trúng đích** → **3★**
+- **0 điểm** → **0★**
+- **1-15 điểm** → **1★**
+- **16-30 điểm** → **2★**
+- **Trên 31 điểm** → **3★**
